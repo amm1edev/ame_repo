@@ -1,30 +1,41 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔓 Not licensed.
+# ( o.o )  🔐 Licensed under the GNU GPLv3.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: stickers
 # Description: Tasks with stickers
-# Author: GeekTG
+# Author: HitaloSama
 # Commands:
-# .kang | .gifify | .stext
+# .kang | .gifify
 # ---------------------------------------------------------------------------------
 
 
-# -*- coding: utf-8 -*-
+#    Friendly Telegram (telegram userbot)
+#    Copyright (C) 2018-2019 The Authors
 
-# requires: lottie cairosvg Pillow
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# requires: git+https://gitlab.com/mattia.basaglia/python-lottie@master cairosvg Pillow>=6.1.0
 
 import asyncio
-import io
 import itertools
 import logging
 import warnings
 from io import BytesIO
-from textwrap import wrap
 
-import requests
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 from .. import loader, utils
 
@@ -36,11 +47,6 @@ except OSError:
     logger.exception("Lottie not available")
 
 warnings.simplefilter("error", Image.DecompressionBombWarning)
-
-bytes_font = requests.get(
-    "https://github.com/KeyZenD/l/blob/master/bold.ttf?raw=true"
-).content
-logger = logging.getLogger(__name__)
 
 
 @loader.tds
@@ -89,9 +95,6 @@ class StickersMod(loader.Module):
             lambda m: self.strings("default_sticker_emoji_cfg_doc", m),
         )
         self._lock = asyncio.Lock()
-
-    async def client_ready(self, client, db):
-        self.client = client
 
     async def kangcmd(self, message):  # noqa: C901 # TODO: split this into helpers
         """Use in reply or with an attached media:
@@ -399,49 +402,6 @@ class StickersMod(loader.Module):
                 result.close()
             except UnboundLocalError:
                 pass
-
-    async def stextcmd(self, message):
-        """.stext <reply to photo>"""
-        await message.delete()
-        text = utils.get_args_raw(message)
-        reply = await message.get_reply_message()
-        if not text:
-            if not reply:
-                text = "#ffffff .stext <text or reply>"
-            elif not reply.message:
-                text = "#ffffff .stext <text or reply>"
-            else:
-                text = reply.raw_text
-        color = text.split(" ", 1)[0]
-        if color.startswith("#") and len(color) == 7:
-            for ch in color.lower()[1:]:
-                if ch not in "0123456789abcdef":
-                    break
-            if len(text.split(" ", 1)) > 1:
-                text = text.split(" ", 1)[1]
-            else:
-                if reply:
-                    if reply.message:
-                        text = reply.raw_text
-        else:
-            color = "#FFFFFF"
-        txt = []
-        for line in text.split("\n"):
-            txt.append("\n".join(wrap(line, 30)))
-        text = "\n".join(txt)
-        font = io.BytesIO(bytes_font)
-        font = ImageFont.truetype(font, 100)
-        image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(image)
-        w, h = draw.multiline_textsize(text=text, font=font)
-        image = Image.new("RGBA", (w + 100, h + 100), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(image)
-        draw.multiline_text((50, 50), text=text, font=font, fill=color, align="center")
-        output = io.BytesIO()
-        output.name = color + ".webp"
-        image.save(output, "WEBP")
-        output.seek(0)
-        await self.client.send_file(message.to_id, output, reply_to=reply)
 
 
 def click_buttons(buttons, target_pack):

@@ -1,103 +1,91 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔓 Not licensed.
+# ( o.o )  🔐 Licensed under the GNU GPLv3.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: spam
-# Description: Спам модуль
-# Author: Fl1yd
+# Description: Annoys people really effectively
+# Author: HitaloSama
 # Commands:
-# .spam | .cspam | .wspam | .delayspam
+# .spam
 # ---------------------------------------------------------------------------------
 
 
-from asyncio import gather, sleep
+#    Friendly Telegram (telegram userbot)
+#    Copyright (C) 2018-2019 The Authors
+
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import asyncio
+import logging
 
 from .. import loader, utils
 
-
-def register(cb):
-    cb(SpamMod())
+logger = logging.getLogger(__name__)
 
 
+@loader.tds
 class SpamMod(loader.Module):
-    """Спам модуль"""
+    """Annoys people really effectively"""
 
-    strings = {"name": "Spam"}
+    strings = {
+        "name": "Spam",
+        "need_spam": "<b>U wot? I need something to spam.</b>",
+        "spam_urself": "<b>Go spam urself.</b>",
+        "nice_number": "<b>Nice number bro.</b>",
+        "much_spam": "<b>Haha, much spam.</b>",
+    }
 
     async def spamcmd(self, message):
-        """Обычный спам. Используй .spam <кол-во:int> <текст или реплай>."""
-        try:
-            await message.delete()
-            args = utils.get_args(message)
-            count = int(args[0].strip())
-            reply = await message.get_reply_message()
-            if reply:
-                if reply.media:
-                    for _ in range(count):
-                        await message.client.send_file(message.to_id, reply.media)
-                    return
-                else:
-                    for _ in range(count):
-                        await message.client.send_message(message.to_id, reply)
+        """.spam <count> <message>"""
+        use_reply = False
+        args = utils.get_args(message)
+        logger.debug(args)
+        if len(args) == 0:
+            await utils.answer(message, self.strings("need_spam", message))
+            return
+        if len(args) == 1:
+            if message.is_reply:
+                use_reply = True
             else:
-                message.message = " ".join(args[1:])
-                for _ in range(count):
-                    await gather(*[message.respond(message)])
-        except:
-            return await message.client.send_message(
-                message.to_id, ".spam <кол-во:int> <текст или реплай>."
-            )
-
-    async def cspamcmd(self, message):
-        """Спам символами. Используй .cspam <текст или реплай>."""
-        await message.delete()
-        reply = await message.get_reply_message()
-        if reply:
-            msg = reply.text
-        else:
-            msg = utils.get_args_raw(message)
-        msg = msg.replace(" ", "")
-        for m in msg:
-            await message.respond(m)
-
-    async def wspamcmd(self, message):
-        """Спам словами. Используй .wspam <текст или реплай>."""
-        await message.delete()
-        reply = await message.get_reply_message()
-        if reply:
-            msg = reply.text
-        else:
-            msg = utils.get_args_raw(message)
-        msg = msg.split()
-        for m in msg:
-            await message.respond(m)
-
-    async def delayspamcmd(self, message):
-        """Спам с задержкой. Используй .delayspam <время:int> <кол-во:int> <текст или реплай>."""
+                await utils.answer(message, self.strings("spam_urself", message))
+                return
+        count = args[0]
+        spam = (await message.get_reply_message()) if use_reply else message
+        spam.message = " ".join(args[1:])
         try:
-            await message.delete()
-            args = utils.get_args_raw(message)
-            reply = await message.get_reply_message()
-            time = int(args.split(" ", 2)[0])
-            count = int(args.split(" ", 2)[1])
-            if reply:
-                if reply.media:
-                    for _ in range(count):
-                        await message.client.send_file(
-                            message.to_id, reply.media, reply_to=reply.id
-                        )
-                        await sleep(time)
-                else:
-                    for _ in range(count):
-                        await reply.reply(args.split(" ", 2)[2])
-                        await sleep(time)
-            else:
-                spammsg = args.split(" ", 2)[2]
-                for _ in range(count):
-                    await message.respond(spammsg)
-                    await sleep(time)
-        except:
-            return await message.client.send_message(
-                message.to_id, ".delayspam <время:int> <кол-во:int> <текст или реплай>"
+            count = int(count)
+        except ValueError:
+            await utils.answer(message, self.strings("nice_number", message))
+            return
+        if count < 1:
+            await utils.answer(message, self.strings("much_spam", message))
+            return
+        await message.delete()
+        if count > 20:
+            # Be kind to other people
+            sleepy = 2
+        else:
+            sleepy = 0
+        i = 0
+        size = 1 if sleepy else 100
+        while i < count:
+            await asyncio.gather(
+                *[message.respond(spam) for x in range(min(count, size))]
             )
+            await asyncio.sleep(sleepy)
+            i += size
+        await self.allmodules.log(
+            "spam", group=message.to_id, data=spam.message + " (" + str(count) + ")"
+        )

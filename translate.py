@@ -1,97 +1,104 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔓 Not licensed.
+# ( o.o )  🔐 Licensed under the GNU GPLv3.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: translate
-# Description: Translator Module
-# Author: GeekTG
+# Description: Translator
+# Author: HitaloSama
 # Commands:
-# .gtrsl | .translate
+# .translate
 # ---------------------------------------------------------------------------------
 
 
-# -*- coding: utf-8 -*-
+#    Friendly Telegram (telegram userbot)
+#    Copyright (C) 2018-2019 The Authors
 
-# Module author: @ftgmodulesbyfl1yd
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
 
-# requires: googletrans==4.0.0rc1
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
 
-from googletrans import LANGUAGES, Translator
-from telethon import events, functions
-from telethon.errors.rpcerrorlist import YouBlockedUserError
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import logging
+
+from Yandex import Translate
 
 from .. import loader, utils
 
+logger = logging.getLogger(__name__)
+
 
 @loader.tds
-class TranslatorMod(loader.Module):
-    """Translator Module"""
+class TranslateMod(loader.Module):
+    """Translator"""
 
-    strings = {"name": "Translate"}
+    strings = {
+        "name": "Translator",
+        "translated": (
+            "<b>From: </b><code>{from_lang}</code>"
+            "\n<b>To: </b><code>{to_lang}</code>\n\n{output}"
+        ),
+        "invalid_text": "Invalid text to translate",
+        "doc_default_lang": "Language to translate to by default",
+        "doc_api_key": "API key from https://translate.yandex.com/developers/keys",
+    }
 
-    async def gtrslcmd(self, message):
-        """Use it: .gtrsl <what language to translate from> <to which language to translate>
-        <text> or .gtrsl <to translate> <reply>; langs"""
-        args = utils.get_args_raw(message)
-        reply = await message.get_reply_message()
-        langs = LANGUAGES
-        lang = args.split()
-        tr = Translator().translate
-        if not args and not reply:
-            return await message.edit("No arguments or reply")
-        if args == "langs":
-            return await message.edit(
-                "<code>" + "\n".join(str(langs).split(", ")) + "</code>"
-            )
-        if reply:
-            try:
-                trslreply = True
-                text = reply.text
-                if len(lang) >= 2:
-                    trslreply = False
-                dest = langs[lang[0]]
-                r = tr(args.split(" ", 1)[1] if not trslreply else text, dest=dest)
-            except:
-                r = tr(reply.text)
-        else:
-            try:
-                try:
-                    src = langs[lang[0]]
-                    dest = langs[lang[1]]
-                    text = args.split(" ", 2)[2]
-                    r = tr(text, src=src, dest=dest)
-                except:
-                    dest = langs[lang[0]]
-                    text = args.split(" ", 1)[1]
-                    r = tr(text, dest=dest)
-            except KeyError:
-                r = tr(args)
-        return await message.edit(f"<b>[{r.src} ➜ {r.dest}]</b>\n{r.text}")
+    def __init__(self):
+        self.config = loader.ModuleConfig(
+            "DEFAULT_LANG",
+            "en",
+            lambda m: self.strings("doc_default_lang", m),
+            "API_KEY",
+            "",
+            lambda m: self.strings("doc_api_key", m),
+        )
+
+    def config_complete(self):
+        self.tr = Translate(self.config["API_KEY"])
 
     @loader.unrestricted
     @loader.ratelimit
     async def translatecmd(self, message):
-        """Translate text via Yandex Translate"""
-        chat = "@YTranslateBot"
-        reply = await message.get_reply_message()
-        async with message.client.conversation(chat) as conv:
-            text = utils.get_args_raw(message)
-            if reply:
-                text = await message.get_reply_message()
-            try:
-                response = conv.wait_event(
-                    events.NewMessage(incoming=True, from_users=104784211)
-                )
-                mm = await message.client.send_message(chat, text)
-                response = await response
-                await mm.delete()
-            except YouBlockedUserError:
-                await message.edit("<code>Unblock @YTranslateBot</code>")
-                return
-            await message.edit(str(response.text).split(": ", 1)[1])
-            await message.client(
-                functions.messages.DeleteHistoryRequest(
-                    peer="YTranslateBot", max_id=0, just_clear=False, revoke=True
-                )
+        """.translate [from_lang->][->to_lang] <text>"""
+        args = utils.get_args(message)
+
+        if len(args) == 0 or "->" not in args[0]:
+            text = " ".join(args)
+            args = ["", self.config["DEFAULT_LANG"]]
+        else:
+            text = " ".join(args[1:])
+            args = args[0].split("->")
+
+        if len(text) == 0 and message.is_reply:
+            text = (await message.get_reply_message()).message
+        if len(text) == 0:
+            await utils.answer(message, self.strings("invalid_text", message))
+            return
+        if args[0] == "":
+            args[0] = self.tr.detect(text)
+        if len(args) == 3:
+            del args[1]
+        if len(args) == 1:
+            logging.error(
+                "python split() error, if there is -> in the text, it must split!"
             )
+            raise RuntimeError()
+        if args[1] == "":
+            args[1] = self.config["DEFAULT_LANG"]
+        args[0] = args[0].lower()
+        logger.debug(args)
+        translated = self.tr.translate(text, args[1], args[0])
+        ret = self.strings("translated", message).format(
+            from_lang=utils.escape_html(args[0]),
+            to_lang=utils.escape_html(args[1]),
+            output=utils.escape_html(translated),
+        )
+        await utils.answer(message, ret)

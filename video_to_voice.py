@@ -1,123 +1,74 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the GNU AGPLv3.
+# ( o.o )  🔓 Not licensed.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: video_to_voice
-# Author: Den4ikSuperOstryyPer4ik
+# Author: Ijidishurka
 # Commands:
-# .convert_to_voice
+# .гс
 # ---------------------------------------------------------------------------------
 
-#
-# 	 @@@@@@    @@@@@@   @@@@@@@  @@@@@@@    @@@@@@   @@@@@@@@@@    @@@@@@   @@@@@@@   @@@  @@@  @@@       @@@@@@@@   @@@@@@
-# 	@@@@@@@@  @@@@@@@   @@@@@@@  @@@@@@@@  @@@@@@@@  @@@@@@@@@@@  @@@@@@@@  @@@@@@@@  @@@  @@@  @@@       @@@@@@@@  @@@@@@@
-# 	@@!  @@@  !@@         @@!    @@!  @@@  @@!  @@@  @@! @@! @@!  @@!  @@@  @@!  @@@  @@!  @@@  @@!       @@!       !@@
-# 	!@!  @!@  !@!         !@!    !@!  @!@  !@!  @!@  !@! !@! !@!  !@!  @!@  !@!  @!@  !@!  @!@  !@!       !@!       !@!
-# 	@!@!@!@!  !!@@!!      @!!    @!@!!@!   @!@  !@!  @!! !!@ @!@  @!@  !@!  @!@  !@!  @!@  !@!  @!!       @!!!:!    !!@@!!
-# 	!!!@!!!!   !!@!!!     !!!    !!@!@!    !@!  !!!  !@!   ! !@!  !@!  !!!  !@!  !!!  !@!  !!!  !!!       !!!!!:     !!@!!!
-# 	!!:  !!!       !:!    !!:    !!: :!!   !!:  !!!  !!:     !!:  !!:  !!!  !!:  !!!  !!:  !!!  !!:       !!:            !:!
-# 	:!:  !:!      !:!     :!:    :!:  !:!  :!:  !:!  :!:     :!:  :!:  !:!  :!:  !:!  :!:  !:!   :!:      :!:           !:!
-# 	::   :::  :::: ::      ::    ::   :::  ::::: ::  :::     ::   ::::: ::   :::: ::  ::::: ::   :: ::::   :: ::::  :::: ::
-# 	 :   : :  :: : :       :      :   : :   : :  :    :      :     : :  :   :: :  :    : :  :   : :: : :  : :: ::   :: : :
-#
-#                                             © Copyright 2023
-#
-#                                    https://t.me/Den4ikSuperOstryyPer4ik
-#                                                  and
-#                                          https://t.me/ToXicUse
-#
-#                                    🔒 Licensed under the GNU AGPLv3
-#                                 https://www.gnu.org/licenses/agpl-3.0.html
-#
-# meta developer: @AstroModules
-# meta pic: None
-# meta banner: None
-# scope: hikka_only
-# requires: moviepy
-
+# meta developer: @modwini
 import os
-from pathlib import Path
 
-import moviepy.editor
-import telethon
+from moviepy.editor import VideoFileClip
 
-from .. import loader, utils
+from .. import loader
 
 
 @loader.tds
-class VideoToVoice(loader.Module):
-    """Convert Video to voice"""
+class VideoToVoiceMod(loader.Module):
+    """Модуль, который преобразует видео в голосовое сообщение или MP3 файл."""
 
-    strings = {"name": "VideoToVoice"}
+    strings = {"name": "video_to_voice"}
 
-    def get_audio(self, path: str) -> str:
-        video_file = Path(path)
+    @loader.owner
+    async def гсcmd(self, message):
+        """Команда гс, преобразующая видео в голосовое сообщение."""
+        await message.delete()
 
-        video = moviepy.editor.VideoFileClip(str(video_file))
-        audio = video.audio
-        audio.write_audiofile(f"{video_file.stem}.ogg")
-        os.remove(path)
-        return f"{video_file.stem}.ogg"
+        video_message = await message.get_reply_message()
+        if not video_message or not video_message.video:
+            await message.edit("Ответьте на видео!")
+            return
 
-    def get_duration(self, attributes):
-        duration = 0
-        for i in attributes:
-            if isinstance(i, telethon.tl.types.DocumentAttributeVideo):
-                duration = i.duration
-                break
-        return duration
+        video_file = await video_message.download_media()
+        video_clip = VideoFileClip(video_file)
+        audio_clip = video_clip.audio
 
-    @loader.command()
-    async def convert_to_voice(self, message):
-        """<reply_to_video> -> получить Войс звука видео, либо отправлять команду с прикрепленным видео(оно удалится после отправления сделанного войса), либо отправить команду ответом на видео."""
-        msg = await utils.answer(message, "Ожидайте, загрузка...")
-
-        reply = await message.get_reply_message()
-
-        if (
-            message.media is None
-            and reply
-            and reply.media is None
-            or message.media is None
-            and reply is None
-        ):
-            return await utils.answer(
-                msg,
-                (
-                    "Кажется вы не ответили командой на видео или не прикрепили видео к"
-                    " сообщению с командой."
-                ),
-            )
-
-        if message.media:
-            msg_media = message
-        elif reply and reply.media:
-            msg_media = await message.get_reply_message()
-        else:
-            return await utils.answer(
-                msg,
-                (
-                    "Кажется вы не ответили командой на видео или не прикрепили видео к"
-                    " сообщению с командой."
-                ),
-            )
-
-        path = self.get_audio((await msg_media.download_media()))
-        await self.client.send_file(
-            message.chat.id,
-            path,
-            attributes=[
-                telethon.tl.types.DocumentAttributeAudio(
-                    duration=(self.get_duration(msg_media.media.document.attributes)),
-                    voice=True,
-                    title=None,
-                    performer=None,
-                    waveform=None,
-                )
-            ],
+        voice_file = "voice.ogg"
+        audio_clip.write_audiofile(voice_file, verbose=False, logger=None)
+        await message.client.send_file(
+            message.to_id, voice_file, voice_note=True, reply_to=video_message.id
         )
-        os.remove(path)
-        if msg.out:
-            await msg.delete()
-        return
+
+        video_clip.close()
+        audio_clip.close()
+        os.remove(video_file)
+        os.remove(voice_file)
+
+    @loader.owner
+    async def mp3cmd(self, message):
+        """Команда mp3, преобразующая видео в MP3 файл."""
+        await message.delete()
+
+        video_message = await message.get_reply_message()
+        if not video_message or not video_message.video:
+            await message.edit("Ответьте на видео!")
+            return
+
+        video_file = await video_message.download_media()
+        video_clip = VideoFileClip(video_file)
+        audio_clip = video_clip.audio
+
+        audio_file = "modwini.mp3"
+        audio_clip.write_audiofile(audio_file, verbose=False, logger=None)
+        await message.client.send_file(
+            message.to_id, audio_file, reply_to=video_message.id
+        )
+
+        video_clip.close()
+        audio_clip.close()
+        os.remove(video_file)
+        os.remove(audio_file)

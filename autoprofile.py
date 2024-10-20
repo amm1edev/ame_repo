@@ -1,27 +1,44 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔓 Not licensed.
+# ( o.o )  🔐 Licensed under the GNU GPLv3.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: autoprofile
 # Description: Automatic stuff for your profile :P
-# Author: GeekTG
+# Author: HitaloSama
 # Commands:
 # .autopfp      | .stopautopfp | .autobio | .stopautobio | .autoname
 # .stopautoname | .delpfp
 # ---------------------------------------------------------------------------------
 
 
-# -*- coding: utf-8 -*-
+#    Friendly Telegram (telegram userbot)
+#    Copyright (C) 2018-2019 The Authors
+
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import ast
 import asyncio
+import logging
 import time
 from io import BytesIO
 
 from telethon.tl import functions
 
 from .. import loader, utils
+
+logger = logging.getLogger(__name__)
 
 try:
     from PIL import Image
@@ -136,15 +153,16 @@ class AutoProfileMod(loader.Module):
 
         if self.pfp_enabled is False:
             return await utils.answer(message, self.strings("pfp_not_enabled", message))
-        self.pfp_enabled = False
+        else:
+            self.pfp_enabled = False
 
-        await self.client(
-            functions.photos.DeletePhotosRequest(
-                await self.client.get_profile_photos("me", limit=1)
+            await self.client(
+                functions.photos.DeletePhotosRequest(
+                    await self.client.get_profile_photos("me", limit=1)
+                )
             )
-        )
-        await self.allmodules.log("stop_autopfp")
-        await utils.answer(message, self.strings("pfp_disabled", message))
+            await self.allmodules.log("stop_autopfp")
+            await utils.answer(message, self.strings("pfp_disabled", message))
 
     async def autobiocmd(self, message):
         """Automatically changes your account's bio with current time, usage:
@@ -162,7 +180,7 @@ class AutoProfileMod(loader.Module):
         await self.allmodules.log("start_autobio")
         await utils.answer(message, self.strings("enabled_bio", message))
 
-        while self.bio_enabled:
+        while self.bio_enabled is True:
             current_time = time.strftime("%H:%M")
             bio = raw_bio.format(time=current_time)
             await self.client(functions.account.UpdateProfileRequest(about=bio))
@@ -173,12 +191,15 @@ class AutoProfileMod(loader.Module):
 
         if self.bio_enabled is False:
             return await utils.answer(message, self.strings("bio_not_enabled", message))
-        self.bio_enabled = False
-        await self.allmodules.log("stop_autobio")
-        await utils.answer(message, self.strings("disabled_bio", message))
-        await self.client(
-            functions.account.UpdateProfileRequest(about=self.raw_bio.format(time=""))
-        )
+        else:
+            self.bio_enabled = False
+            await self.allmodules.log("stop_autobio")
+            await utils.answer(message, self.strings("disabled_bio", message))
+            await self.client(
+                functions.account.UpdateProfileRequest(
+                    about=self.raw_bio.format(time="")
+                )
+            )
 
     async def autonamecmd(self, message):
         """Automatically changes your Telegram name with current time, usage:
@@ -196,7 +217,7 @@ class AutoProfileMod(loader.Module):
         await self.allmodules.log("start_autoname")
         await utils.answer(message, self.strings("enabled_name", message))
 
-        while self.name_enabled:
+        while self.name_enabled is True:
             current_time = time.strftime("%H:%M")
             name = raw_name.format(time=current_time)
             await self.client(functions.account.UpdateProfileRequest(first_name=name))
@@ -209,14 +230,15 @@ class AutoProfileMod(loader.Module):
             return await utils.answer(
                 message, self.strings("name_not_enabled", message)
             )
-        self.name_enabled = False
-        await self.allmodules.log("stop_autoname")
-        await utils.answer(message, self.strings("disabled_name", message))
-        await self.client(
-            functions.account.UpdateProfileRequest(
-                first_name=self.raw_name.format(time="")
+        else:
+            self.name_enabled = False
+            await self.allmodules.log("stop_autoname")
+            await utils.answer(message, self.strings("disabled_name", message))
+            await self.client(
+                functions.account.UpdateProfileRequest(
+                    first_name=self.raw_name.format(time="")
+                )
             )
-        )
 
     async def delpfpcmd(self, message):
         """Remove x profile pic(s) from your profile.

@@ -1,136 +1,70 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔓 Not licensed.
+# ( o.o )  🔐 Licensed under the GNU GPLv3.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: tts
-# Description: Text to speech module
-# Author: GeekTG
+# Description: No description
+# Author: HitaloSama
 # Commands:
-# .levitan | .oksana | .yandex | .tts
+# .tts
 # ---------------------------------------------------------------------------------
 
 
-# requires: pydub requests gtts hachoir
-import io
-import os
+#    Friendly Telegram (telegram userbot)
+#    Copyright (C) 2018-2019 The Authors
 
-import requests
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# requires: gtts hachoir
+
+from io import BytesIO
+
 from gtts import gTTS
-from pydub import AudioSegment
 
 from .. import loader, utils
 
 
-def register(cb):
-    cb(DttsMod())
-
-
-class DttsMod(loader.Module):
-    """Text to speech module"""
-
+@loader.tds
+class TTSMod(loader.Module):
     strings = {
-        "name": "DTTS",
-        "no_text": "I can't say nothing",
+        "name": "Text to speech",
         "tts_lang_cfg": "Set your language code for the TTS here.",
+        "tts_needs_text": "<code>I need some text to convert to speech!</code>",
     }
 
     def __init__(self):
         self.config = loader.ModuleConfig(
             "TTS_LANG", "en", lambda m: self.strings("tts_lang_cfg", m)
         )
-        self.is_ffmpeg = os.system("ffmpeg -version") == 0
-
-    async def say(self, message, speaker, text, file=".dtts.mp3"):
-        reply = await message.get_reply_message()
-        if not text:
-            if not reply:
-                return await utils.answer(message, self.strings["no_text"])
-            text = reply.raw_text  # use text from reply
-        if not text:
-            return await utils.answer(message, self.strings["no_text"])
-        if message.out:
-            await message.delete()  # Delete message only one is user's
-        data = {"text": text}
-        if speaker:
-            data["speaker"] = speaker
-
-        # creating file in memory
-        f = io.BytesIO(
-            requests.get("https://station.aimylogic.com/generate", data=data).content
-        )
-        f.name = file
-
-        if self.is_ffmpeg:
-            f, duration = to_voice(f)
-        else:
-            duration = None
-
-        await message.client.send_file(
-            message.chat_id, f, voice_note=True, reply_to=reply, duration=duration
-        )
-
-    @loader.unrestricted
-    @loader.ratelimit
-    async def levitancmd(self, message):
-        """Convert text to speech with levitan voice"""
-        await self.say(message, "levitan", utils.get_args_raw(message))
-
-    @loader.unrestricted
-    @loader.ratelimit
-    async def oksanacmd(self, message):
-        """Convert text to speech with oksana voice"""
-        await self.say(message, "oksana", utils.get_args_raw(message))
-
-    @loader.unrestricted
-    @loader.ratelimit
-    async def yandexcmd(self, message):
-        """Convert text to speech with yandex voice"""
-        await self.say(message, None, utils.get_args_raw(message))
 
     @loader.unrestricted
     @loader.ratelimit
     async def ttscmd(self, message):
         """Convert text to speech with Google APIs"""
-        reply = await message.get_reply_message()
         text = utils.get_args_raw(message.message)
-
-        if not text:
+        if len(text) == 0:
             if message.is_reply:
                 text = (await message.get_reply_message()).message
             else:
-                return await utils.answer(message, self.strings("no_text", message))
-
-        if message.out:
-            await message.delete()
+                await utils.answer(message, self.strings("tts_needs_text", message))
+                return
 
         tts = await utils.run_sync(gTTS, text, lang=self.config["TTS_LANG"])
-        voice = io.BytesIO()
+        voice = BytesIO()
         await utils.run_sync(tts.write_to_fp, voice)
         voice.seek(0)
         voice.name = "voice.mp3"
 
-        if self.is_ffmpeg:
-            voice, duration = to_voice(voice)
-        else:
-            duration = None
-
-        await message.client.send_file(
-            message.chat_id, voice, voice_note=True, reply_to=reply, duration=duration
-        )
-
-
-def to_voice(item):
-    """Returns audio in opus format and it's duration"""
-    item.seek(0)
-    item = AudioSegment.from_file(item)
-    m = io.BytesIO()
-    m.name = "voice.ogg"
-    item.split_to_mono()
-    dur = len(item) / 1000
-    item.export(m, format="ogg", bitrate="64k", codec="libopus")
-    m.seek(0)
-    return m, dur
-
-
-# By @vreply @pernel_kanic @nim1love @db0mb3r and add @tshipenchko some geyporn
+        await utils.answer(message, voice, voice_note=True)

@@ -1,49 +1,162 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔓 Not licensed.
+# ( o.o )  🔐 Licensed under the GNU GPLv3.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: weather
-# Author: GeekTG
+# Description: Checks the weather
+# Get an API key at https://openweathermap.org/appid
+# Author: HitaloSama
 # Commands:
-# .pw | .aw | .w
+# .weather
 # ---------------------------------------------------------------------------------
 
-# -*- coding: utf-8 -*-
 
-# Module author: @govnocodules + @ftgmodulesbyfl1yd
+#    Friendly Telegram (telegram userbot)
+#    Copyright (C) 2018-2019 The Authors
 
-import requests
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# requires: pyowm>=3.0.0
+
+import logging
+import math
+
+import pyowm
 
 from .. import loader, utils
+from ..utils import escape_html as eh
+
+logger = logging.getLogger(__name__)
+
+
+def deg_to_text(deg):
+    if deg is None:
+        return None
+    return [
+        "N",
+        "NNE",
+        "NE",
+        "ENE",
+        "E",
+        "ESE",
+        "SE",
+        "SSE",
+        "S",
+        "SSW",
+        "SW",
+        "WSW",
+        "W",
+        "WNW",
+        "NW",
+        "NNW",
+    ][round(deg / 22.5) % 16]
+
+
+def round_to_sf(n, digits):
+    return round(n, digits - 1 - int(math.floor(math.log10(abs(n)))))
 
 
 @loader.tds
 class WeatherMod(loader.Module):
-    """Weather Module"""
+    """Checks the weather
+    Get an API key at https://openweathermap.org/appid"""
 
-    strings = {"name": "Weather"}
+    strings = {
+        "name": "Weather",
+        "provide_api": "<b>Please provide an API key via the configuration mode.</b>",
+        "invalid_temp_units": (
+            "<b>Invalid temperature units provided. Please reconfigure the module.</b>"
+        ),
+        "doc_default_loc": "OpenWeatherMap City ID",
+        "doc_api_key": "API Key from https://openweathermap.org/appid",
+        "doc_temp_units": "Temperature unit as English",
+        "result": (
+            "<b>Weather in {loc} is {w} with a high of {high} and a low of {low},"
+            " averaging at {avg} with {humid}% humidity and a {ws}mph {wd} wind.</b>"
+        ),
+        "unknown": "unknown",
+    }
 
-    async def pwcmd(self, m):
-        """ "Picture of weather.\n.aw <city>"""
-        args = utils.get_args_raw(m).replace(" ", "%20")
-        city = requests.get(
-            f"https://wttr.in/{args if args is not None else ''}.png"
-        ).content
-        await utils.answer(m, city)
+    def __init__(self):
+        self.config = loader.ModuleConfig(
+            "DEFAULT_LOCATION",
+            None,
+            lambda m: self.strings("doc_default_loc", m),
+            "API_KEY",
+            None,
+            lambda m: self.strings("doc_api_key", m),
+            "TEMP_UNITS",
+            "celsius",
+            lambda m: self.strings("doc_temp_units", m),
+        )
+        self._owm = None
 
-    async def awcmd(self, m):
-        """ASCII-art of weather.\n.aw <city>"""
-        city = utils.get_args_raw(m).replace(" ", "%20")
-        r = requests.get(f"https://wttr.in/{city if city is not None else ''}?0?q?T")
-        await utils.answer(m, f"<code>City: {r.text}</code>")
-
-    async def wcmd(self, m):
-        """.w <city>"""
-        city = utils.get_args_raw(m).replace(" ", "%20")
-        if city:
-            r = requests.get("https://wttr.in/" + city + "?format=%l:+%c+%t,+%w+%m")
+    def config_complete(self):
+        if self.config["API_KEY"]:
+            self._owm = pyowm.OWM(self.config["API_KEY"]).weather_manager()
         else:
-            r = requests.get("https://wttr.in/?format=%l:+%c+%t,+%w+%m")
+            self._owm = None
 
-        await utils.answer(m, r.text)
+    @loader.unrestricted
+    @loader.ratelimit
+    async def weathercmd(self, message):
+        """.weather [location]"""
+        if self._owm is None:
+            await utils.answer(message, self.strings("provide_api", message))
+            return
+        args = utils.get_args_raw(message)
+        func = None
+        if not args:
+            func = self._owm.weather_at_id
+            args = [self.config["DEFAULT_LOCATION"]]
+        else:
+            try:
+                args = [int(args)]
+                func = self._owm.weather_at_id
+            except ValueError:
+                coords = utils.get_args_split_by(message, ",")
+                if len(coords) == 2:
+                    try:
+                        args = [int(coord.strip()) for coord in coords]
+                        func = self._owm.weather_at_coords
+                    except ValueError:
+                        pass
+        if func is None:
+            func = self._owm.weather_at_place
+            args = [args]
+        logger.debug(func)
+        logger.debug(args)
+        o = await utils.run_sync(func, *args)
+        logger.debug("Weather at %r is %r", args, o)
+        try:
+            w = o.weather
+            temp = w.get_temperature(self.config["TEMP_UNITS"])
+        except ValueError:
+            await utils.answer(message, self.strings("invalid_temp_units", message))
+            return
+        ret = self.strings("result", message).format(
+            loc=eh(o.get_location().get_name()),
+            w=eh(w.get_detailed_status().lower()),
+            high=eh(temp["temp_max"]),
+            low=eh(temp["temp_min"]),
+            avg=eh(temp["temp"]),
+            humid=eh(w.get_humidity()),
+            ws=eh(round_to_sf(w.get_wind("miles_hour")["speed"], 3)),
+            wd=eh(
+                deg_to_text(w.get_wind().get("deg", None))
+                or self.strings("unknown", message)
+            ),
+        )
+        await utils.answer(message, ret)
