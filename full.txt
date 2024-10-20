@@ -396,7 +396,7 @@ RenameCont
 RepoSaver
 Reposaver
 RndNsfw
-S-D%Pics
+SDPics
 S3
 SHChat
 SafetyMod
