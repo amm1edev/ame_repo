@@ -5,9 +5,9 @@
 # ---------------------------------------------------------------------------------
 # Name: hearts
 # Description: No description
-# Author: Fl1yd
+# Author: KeyZenD
 # Commands:
-# .lhearts | .shearts
+# .hearts
 # ---------------------------------------------------------------------------------
 
 
@@ -21,14 +21,8 @@ class HeartsMod(loader.Module):
     strings = {"name": "Heart's"}
 
     @loader.owner
-    async def lheartscmd(self, message):
+    async def heartscmd(self, message):
         for _ in range(10):
-            for lheart in ["❤", "️🧡", "💛", "💚", "💙", "💜", "🤎", "🖤", "🤍"]:
-                await message.edit(lheart)
-                await sleep(3)
-
-    async def sheartscmd(self, message):
-        for _ in range(10):
-            for sheart in ["❤", "️🧡", "💛", "💚", "💙", "💜", "🤎", "🖤", "🤍"]:
-                await message.edit(sheart)
+            for heart in ["❤", "️🧡", "💛", "💚", "💙", "💜"]:
+                await message.edit(heart)
                 await sleep(0.3)
