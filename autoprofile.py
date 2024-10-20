@@ -1,48 +1,34 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the GNU AGPLv3.
+# ( o.o )  🔓 Not licensed.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: autoprofile
-# Author: AmoreForever
+# Description: Automatic stuff for your profile :P
+# Author: GeekTG
 # Commands:
-# .cfautoprof | .autobio | .stopautobio | .autoname | .stopautoname
-# .aguide    
+# .autopfp      | .stopautopfp | .autobio | .stopautobio | .autoname
+# .stopautoname | .delpfp
 # ---------------------------------------------------------------------------------
 
-#    Friendly Telegram (telegram userbot)
-#    Copyright (C) 2018-2019 The Authors
 
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
+# -*- coding: utf-8 -*-
 
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-# █ █ █ █▄▀ ▄▀█ █▀▄▀█ █▀█ █▀█ █ █
-# █▀█ █ █ █ █▀█ █ ▀ █ █▄█ █▀▄ █▄█
-
-# 🔒 Licensed under the GNU GPLv3
-# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
-# 👤 https://t.me/hikamoru
-
-# meta developer: @hikamorumods, FTG
-__version__ = (1, 1, 0)
-
+import ast
 import asyncio
-import datetime
+import time
+from io import BytesIO
 
 from telethon.tl import functions
-from telethon.utils import get_display_name
 
 from .. import loader, utils
+
+try:
+    from PIL import Image
+except ImportError:
+    pil_installed = False
+else:
+    pil_installed = True
 
 
 @loader.tds
@@ -50,178 +36,119 @@ class AutoProfileMod(loader.Module):
     """Automatic stuff for your profile :P"""
 
     strings = {
-        "name": "AutoProfile",
-        "invalid_args": (
-            "<b>Missing parameters, please read the <code>.aguide</code>  <emoji"
-            " document_id=5213468029597261187>✔️</emoji></b>"
+        "name": "Automatic Profile",
+        "missing_pil": "<b>You don't have Pillow installed</b>",
+        "missing_pfp": "<b>You don't have a profile picture to rotate</b>",
+        "invalid_args": "<b>Missing parameters, please read the docs</b>",
+        "invalid_degrees": (
+            "<b>Invalid number of degrees to rotate, please read the docs</b>"
         ),
-        "missing_time": (
-            "<b>Time was not specified in bio <emoji"
-            " document_id=5215273032553078755>❎</emoji></b>"
+        "invalid_delete": (
+            "<b>Please specify whether to delete the old pictures or not</b>"
         ),
-        "enabled_bio": (
-            "<b>Enabled bio clock <emoji document_id=5212932275376759608>✅</emoji></b>"
+        "enabled_pfp": "<b>Enabled profile picture rotation</b>",
+        "pfp_not_enabled": "<b>Profile picture rotation is not enabled</b>",
+        "pfp_disabled": "<b>Profile picture rotation disabled</b>",
+        "missing_time": "<b>Time was not specified in bio</b>",
+        "enabled_bio": "<b>Enabled bio clock</b>",
+        "bio_not_enabled": "<b>Bio clock is not enabled</b>",
+        "disabled_bio": "<b>Disabled bio clock</b>",
+        "enabled_name": "<b>Enabled name clock</b>",
+        "name_not_enabled": "<b>Name clock is not enabled</b>",
+        "disabled_name": "<b>Name clock disabled</b>",
+        "how_many_pfps": (
+            "<b>Please specify how many profile pictures should be removed</b>"
         ),
-        "bio_not_enabled": (
-            "<b>Bio clock is not enabled <emoji"
-            " document_id=5215273032553078755>❎</emoji></b>"
-        ),
-        "disabled_bio": (
-            "<b>Disabled bio clock <emoji document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "enabled_name": (
-            "<b>Enabled name clock <emoji document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "name_not_enabled": (
-            "<b>Name clock is not enabled <emoji"
-            " document_id=5215273032553078755>❎</emoji></b>"
-        ),
-        "disabled_name": (
-            "<b>Name clock disabled <emoji"
-            " document_id=5215273032553078755>❎</emoji></b>"
-        ),
-        "_cfg_time": "Use timezone 1, -1, -3 etc.",
-    }
-
-    strings_uz = {
-        "invalid_args": (
-            "<b>to'g'ri argumetlar emas, <code > ni o'qing.aguide</code> <emoji"
-            " document_id=5213468029597261187>✔️</emoji></b>"
-        ),
-        "missing_time": (
-            "<b>vaqt bio-da o'rnatilmagan<emoji document_id=5215273032553078755 > ❎< /"
-            " emoji></b>"
-        ),
-        "enabled_bio": (
-            "<b>Bio soat muvaffaqiyatli o'rnatildi <emoji"
-            " document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "bio_not_enabled": (
-            "<b>soat bio-ga o'rnatilmagan<emoji document_id=5215273032553078755 > ❎< /"
-            " emoji > </b>"
-        ),
-        "disabled_bio": (
-            "<b > Bio-dagi vaqt muvaffaqiyatli o'chirildi <emoji document_id ="
-            " 5212932275376759608>✅</emoji></b>"
-        ),
-        "enabled_name": (
-            "<b>soat taxallusga muvaffaqiyatli o'rnatildi <emoji document_id ="
-            " 5212932275376759608>✅</emoji></b>"
-        ),
-        "name_not_enabled": (
-            "<b>soat taxallusga o'rnatilmagan<emoji document_id=5215273032553078755 >"
-            " ❎< / emoji > </b>"
-        ),
-        "disabled_name": (
-            "<b>taxallusdagi vaqt muvaffaqiyatli o'chirildi <emoji document_id ="
-            " 5212932275376759608>✅</emoji></b>"
-        ),
-        "_cfg_time": "vaqt zonasidan foydalaning 1, -1, -3 va boshqalar.",
-    }
-
-    strings_ru = {
-        "invalid_args": (
-            "<b>Не правильные аргуметы, прочитай <code>.aguide</code> <emoji"
-            " document_id=5213468029597261187>✔️</emoji></b>"
-        ),
-        "missing_time": (
-            "<b>Время не было установлено в био<emoji"
-            " document_id=5215273032553078755>❎</emoji></b>"
-        ),
-        "enabled_bio": (
-            "<b>Био часы успешно установлены <emoji"
-            " document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "bio_not_enabled": (
-            "<b>Часы не установлено в био<emoji"
-            " document_id=5215273032553078755>❎</emoji></b>"
-        ),
-        "disabled_bio": (
-            "<b>Время в био успешно отключен <emoji"
-            " document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "enabled_name": (
-            "<b>Часы в ник успешно установлены <emoji"
-            " document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "name_not_enabled": (
-            "<b>Часы не установлены в ник<emoji"
-            " document_id=5215273032553078755>❎</emoji></b>"
-        ),
-        "disabled_name": (
-            "<b>Время в нике успешно отключен <emoji"
-            " document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "_cfg_time": "Используй таймзону 1, -1, -3 и тд.",
-    }
-
-    strings_de = {
-        "invalid_args": (
-            "<b>Sind nicht die richtigen Argumente, lies <code>.aguide</code> <emoji"
-            " document_id=5213468029597261187>✔️</emoji></b>"
-        ),
-        "missing_time": (
-            "<b>Die Zeit wurde nicht auf bio gesetzt<emoji"
-            " document_id=5215273032553078755>❎</emoji></b>"
-        ),
-        "enabled_bio": (
-            "<b>Bio-Uhr wurde erfolgreich installiert <emoji"
-            " document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "bio_not_enabled": (
-            "<b>Die Uhr ist nicht auf bio eingestellt<emoji"
-            " document_id=5215273032553078755>❎</emoji></b>"
-        ),
-        "disabled_bio": (
-            "<b>Zeit in bio erfolgreich deaktiviert <emoji"
-            " document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "enabled_name": (
-            "<b>Die Uhr wurde erfolgreich auf den Nickname gesetzt <emoji"
-            " document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "name_not_enabled": (
-            "<b>Die Uhr ist nicht auf den Spitznamen<emoji"
-            " document_id=5215273032553078755>❎</emoji></b> eingestellt"
-        ),
-        "disabled_name": (
-            "<b>Nickzeit wurde erfolgreich deaktiviert <emoji"
-            " document_id=5212932275376759608>✅</emoji></b>"
-        ),
-        "_cfg_time": "Benutze die Zeitzone 1, -1, -3 usw.",
+        "invalid_pfp_count": "<b>Invalid number of profile pictures to remove</b>",
+        "removed_pfps": "<b>Removed {} profile pic(s)</b>",
     }
 
     def __init__(self):
         self.bio_enabled = False
         self.name_enabled = False
+        self.pfp_enabled = False
         self.raw_bio = None
         self.raw_name = None
-        self.config = loader.ModuleConfig(
-            loader.ConfigValue(
-                "timezone",
-                "+5",
-                lambda: self.strings("_cfg_time"),
-            ),
-        )
 
     async def client_ready(self, client, db):
         self.client = client
-        self._me = await client.get_me()
 
-    @loader.command(ru_doc="""Что-бы указать таймзону через конфиг""")
-    async def cfautoprofcmd(self, message):
-        """To specify the timezone via the config"""
-        name = self.strings("name")
-        await self.allmodules.commands["config"](
-            await utils.answer(message, f"{self.get_prefix()}config {name}")
+    async def autopfpcmd(self, message):
+        """Rotates your profile picture every 60 seconds with x degrees, usage:
+        .autopfp <degrees> <remove previous (last pfp)>
+
+        Degrees - 60, -10, etc
+        Remove last pfp - True/1/False/0, case sensitive"""
+
+        if not pil_installed:
+            return await utils.answer(message, self.strings("missing_pil", message))
+
+        if not await self.client.get_profile_photos("me", limit=1):
+            return await utils.answer(message, self.strings("missing_pfp", message))
+
+        msg = utils.get_args(message)
+        if len(msg) != 2:
+            return await utils.answer(message, self.strings("invalid_args", message))
+
+        try:
+            degrees = int(msg[0])
+        except ValueError:
+            return await utils.answer(message, self.strings("invalid_degrees", message))
+
+        try:
+            delete_previous = ast.literal_eval(msg[1])
+        except (ValueError, SyntaxError):
+            return await utils.answer(message, self.strings("invalid_delete", message))
+
+        with BytesIO() as pfp:
+            await self.client.download_profile_photo("me", file=pfp)
+            raw_pfp = Image.open(pfp)
+
+            self.pfp_enabled = True
+            pfp_degree = 0
+            await self.allmodules.log("start_autopfp")
+            await utils.answer(message, self.strings("enabled_pfp", message))
+
+            while self.pfp_enabled:
+                pfp_degree = (pfp_degree + degrees) % 360
+                rotated = raw_pfp.rotate(pfp_degree)
+                with BytesIO() as buf:
+                    rotated.save(buf, format="JPEG")
+                    buf.seek(0)
+
+                    if delete_previous:
+                        await self.client(
+                            functions.photos.DeletePhotosRequest(
+                                await self.client.get_profile_photos("me", limit=1)
+                            )
+                        )
+
+                    await self.client(
+                        functions.photos.UploadProfilePhotoRequest(
+                            await self.client.upload_file(buf)
+                        )
+                    )
+                    buf.close()
+                await asyncio.sleep(60)
+
+    async def stopautopfpcmd(self, message):
+        """Stop autobio cmd."""
+
+        if self.pfp_enabled is False:
+            return await utils.answer(message, self.strings("pfp_not_enabled", message))
+        self.pfp_enabled = False
+
+        await self.client(
+            functions.photos.DeletePhotosRequest(
+                await self.client.get_profile_photos("me", limit=1)
+            )
         )
+        await self.allmodules.log("stop_autopfp")
+        await utils.answer(message, self.strings("pfp_disabled", message))
 
-    @loader.command(
-        ru_doc="""Автоматически изменяет биографию вашей учетной записи с учетом текущего времени, использования: .autobio 'сообщение, время как {time}'"""
-    )
     async def autobiocmd(self, message):
         """Automatically changes your account's bio with current time, usage:
-        .autobio 'message, time as {time}'"""
+        .autobio '<message, time as {time}>'"""
 
         msg = utils.get_args(message)
         if len(msg) != 1:
@@ -236,31 +163,23 @@ class AutoProfileMod(loader.Module):
         await utils.answer(message, self.strings("enabled_bio", message))
 
         while self.bio_enabled:
-            offset = datetime.timedelta(hours=self.config["timezone"])
-            tz = datetime.timezone(offset)
-            time1 = datetime.datetime.now(tz)
-            current_time = time1.strftime("%H:%M")
+            current_time = time.strftime("%H:%M")
             bio = raw_bio.format(time=current_time)
             await self.client(functions.account.UpdateProfileRequest(about=bio))
             await asyncio.sleep(60)
 
-    @loader.command(ru_doc="""Что-бы остановить время в био введи .stopautobio""")
     async def stopautobiocmd(self, message):
         """Stop autobio cmd."""
 
         if self.bio_enabled is False:
             return await utils.answer(message, self.strings("bio_not_enabled", message))
         self.bio_enabled = False
-
         await self.allmodules.log("stop_autobio")
         await utils.answer(message, self.strings("disabled_bio", message))
         await self.client(
             functions.account.UpdateProfileRequest(about=self.raw_bio.format(time=""))
         )
 
-    @loader.command(
-        ru_doc="""Автоматически изменяет имя вашей учетной записи с учетом текущего времени, использования: .autoname 'сообщение, время как {time}'"""
-    )
     async def autonamecmd(self, message):
         """Automatically changes your Telegram name with current time, usage:
         .autoname '<message, time as {time}>'"""
@@ -278,25 +197,18 @@ class AutoProfileMod(loader.Module):
         await utils.answer(message, self.strings("enabled_name", message))
 
         while self.name_enabled:
-            offset = datetime.timedelta(hours=self.config["timezone"])
-            tz = datetime.timezone(offset)
-            time1 = datetime.datetime.now(tz)
-            current_time = time1.strftime("%H:%M")
+            current_time = time.strftime("%H:%M")
             name = raw_name.format(time=current_time)
             await self.client(functions.account.UpdateProfileRequest(first_name=name))
             await asyncio.sleep(60)
 
-    @loader.command(
-        ru_doc="""Что-бы остановить время в имени учетной записи введи .stopautoname"""
-    )
     async def stopautonamecmd(self, message):
-        """just write .stopautoname"""
+        """Stop autoname cmd."""
 
         if self.name_enabled is False:
             return await utils.answer(
                 message, self.strings("name_not_enabled", message)
             )
-
         self.name_enabled = False
         await self.allmodules.log("stop_autoname")
         await utils.answer(message, self.strings("disabled_name", message))
@@ -306,33 +218,31 @@ class AutoProfileMod(loader.Module):
             )
         )
 
-    @loader.command(ru_docs="""Доки ru/en""")
-    async def aguide(self, message):
-        "Just guide ru/en"
-        args = utils.get_args_raw(message)
-        args = args if args in {"en", "ru"} else "en"
+    async def delpfpcmd(self, message):
+        """Remove x profile pic(s) from your profile.
+        .delpfp <pfps count/unlimited - remove all>"""
 
-        time = "{time}"
-        nick = (
-            f'<a href="tg://user?id={self._me.id}">{utils.escape_html(get_display_name(self._me))}</a>'
-        )
-        pref = f"{utils.escape_html(self.get_prefix())}"
+        args = utils.get_args(message)
+        if not args:
+            return await utils.answer(message, self.strings("how_many_pfps", message))
+        try:
+            pfps_count = int(args[0])
+        except ValueError:
+            return await utils.answer(
+                message, self.strings("invalid_pfp_count", message)
+            )
+        if pfps_count < 0:
+            return await utils.answer(
+                message, self.strings("invalid_pfp_count", message)
+            )
+        if pfps_count == 0:
+            pfps_count = None
 
+        to_delete = await self.client.get_profile_photos("me", limit=pfps_count)
+        await self.client(functions.photos.DeletePhotosRequest(to_delete))
+
+        await self.allmodules.log("delpfp")
         await utils.answer(
-            message,
-            (
-                "<emoji document_id=5789581976176430614>💸</emoji> For"
-                " example:\n\n<emoji document_id=5789667570579672963>💸</emoji>"
-                f" AutoName: <code>{pref}autoname '{nick} | {time}'</code>\n<emoji"
-                " document_id=5789667570579672963>💸</emoji> AutoBio:"
-                f" <code>{pref}autobio 'smth | {time}'</code>\n"
-                if args == "en"
-                else (
-                    "<emoji document_id=5789581976176430614>💸</emoji>"
-                    " Например:\n\n<emoji document_id=5789667570579672963>💸</emoji>"
-                    f" Авто Ник: <code>{pref}autoname '{nick} | {time}'</code>\n<emoji"
-                    " document_id=5789667570579672963>💸</emoji> Авто Био:"
-                    f" <code>{pref}autobio 'что-то | {time}'</code>\n"
-                )
-            ),
+            message, self.strings("removed_pfps", message).format(len(to_delete))
         )
+        return await utils.answer(message, self.strings("how_many_pfps", message))

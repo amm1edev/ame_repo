@@ -1,165 +1,97 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the Copyleft license.
+# ( o.o )  🔓 Not licensed.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: translate
-# Description: 🔡 Module for text translation
-# ➡️ .tr en ru | Hello World
-# ➡️ .tr ru | Hello World
-# ➡️ .tr ru + reply to message
-# Author: CakesTwix
+# Description: Translator Module
+# Author: GeekTG
 # Commands:
-# .atr | .itr | .gtr | .ltr
+# .gtrsl | .translate
 # ---------------------------------------------------------------------------------
 
 
-"""
+# -*- coding: utf-8 -*-
 
-    █▀▀ ▄▀█ █▄▀ █▀▀ █▀ ▀█▀ █░█░█ █ ▀▄▀
-    █▄▄ █▀█ █░█ ██▄ ▄█ ░█░ ▀▄▀▄▀ █ █░█
+# Module author: @ftgmodulesbyfl1yd
 
-    Copyleft 2022 t.me/CakesTwix                                                            
-    This program is free software; you can redistribute it and/or modify 
+# requires: googletrans==4.0.0rc1
 
-"""
-
-__version__ = (2, 0, 0)
-
-# meta pic: https://img.icons8.com/color/512/40C057/translate-text.png
-# meta developer: @cakestwix_mods
-# requires: translators
-
-import asyncio
-import logging
-
-import aiohttp
-import translators as trl
+from googletrans import LANGUAGES, Translator
+from telethon import events, functions
+from telethon.errors.rpcerrorlist import YouBlockedUserError
 
 from .. import loader, utils
 
-logger = logging.getLogger(__name__)
 
-
-@loader.unrestricted
-@loader.ratelimit
 @loader.tds
 class TranslatorMod(loader.Module):
-    """
-    🔡 Module for text translation
-    ➡️ .tr en ru | Hello World
-    ➡️ .tr ru | Hello World
-    ➡️ .tr ru + reply to message
-    """
+    """Translator Module"""
 
-    strings = {
-        "name": "🔡 Translator",
-        "cfg_lingva_url": "Alternative front-end for Google Translate",
-        "error": "Error!\n .gtr [en] ru | text or check help",
-    }
+    strings = {"name": "Translate"}
 
-    strings_ru = {
-        "cfg_lingva_url": "Альтернативный интерфейс для Google Translate",
-        "error": "Ошибка!\n .gtr [en] ru | текст или проверьте хелп",
-    }
-
-    def __init__(self):
-        self.config = loader.ModuleConfig(
-            "lingva_url",
-            "https://lingva.ml/api/v1/{source}/{target}/{query}",
-            lambda m: self.strings("cfg_lingva_url", m),
-        )
-        self.name = self.strings["name"]
-
-    async def tr(self, message, translator):
-        if args := utils.get_args_raw(message):
-            lang_args = args.split("|")[0].split()  # Lang
-            if reply := await message.get_reply_message():
-                if reply.message == "":
-                    return await utils.answer(message, self.strings["error"])
-                if len(lang_args) == 2:
-                    translated_text = translator(
-                        reply.message,
-                        from_language=lang_args[0],
-                        to_language=lang_args[1],
-                    )
-                    return await utils.answer(message, translated_text)
-                elif len(lang_args) == 1:
-                    translated_text = translator(
-                        reply.message, to_language=lang_args[0]
-                    )
-                    return await utils.answer(message, translated_text)
-                else:
-                    await utils.answer(message, self.strings["error"])
-                    await asyncio.sleep(5)
-                    await message.delete()
-                    return
-
-            text_args = args.split("|")[1]  # Text
-            if len(lang_args) == 2 and text_args:
-                translated_text = translator(
-                    text_args, from_language=lang_args[0], to_language=lang_args[1]
-                )
-            elif len(lang_args) == 1 and text_args:
-                translated_text = translator(text_args, to_language=lang_args[0])
-            else:
-                await utils.answer(message, self.strings["error"])
-                await asyncio.sleep(5)
-                await message.delete()
-                return
-
-            await utils.answer(message, translated_text)
+    async def gtrslcmd(self, message):
+        """Use it: .gtrsl <what language to translate from> <to which language to translate>
+        <text> or .gtrsl <to translate> <reply>; langs"""
+        args = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
+        langs = LANGUAGES
+        lang = args.split()
+        tr = Translator().translate
+        if not args and not reply:
+            return await message.edit("No arguments or reply")
+        if args == "langs":
+            return await message.edit(
+                "<code>" + "\n".join(str(langs).split(", ")) + "</code>"
+            )
+        if reply:
+            try:
+                trslreply = True
+                text = reply.text
+                if len(lang) >= 2:
+                    trslreply = False
+                dest = langs[lang[0]]
+                r = tr(args.split(" ", 1)[1] if not trslreply else text, dest=dest)
+            except:
+                r = tr(reply.text)
         else:
-            await utils.answer(message, self.strings["error"])
-            await asyncio.sleep(5)
-            await message.delete()
+            try:
+                try:
+                    src = langs[lang[0]]
+                    dest = langs[lang[1]]
+                    text = args.split(" ", 2)[2]
+                    r = tr(text, src=src, dest=dest)
+                except:
+                    dest = langs[lang[0]]
+                    text = args.split(" ", 1)[1]
+                    r = tr(text, dest=dest)
+            except KeyError:
+                r = tr(args)
+        return await message.edit(f"<b>[{r.src} ➜ {r.dest}]</b>\n{r.text}")
 
-    async def atrcmd(self, message):
-        """
-        Based on Argos (LibreTranslate)
-        """
-        await self.tr(message, trl.argos)
-
-    async def itrcmd(self, message):
-        """
-        Based on Iciba
-        """
-        await self.tr(message, trl.iciba)
-
-    async def gtrcmd(self, message):
-        """
-        Based on Google Translate
-        """
-        await self.tr(message, trl.google)
-
-    async def ltrcmd(self, message):
-        """
-        Based on lingva.ml (Google Translate)
-        """
-        if args := utils.get_args_raw(message):
-            lang_args = args.split("|")[0].split()  # Lang
-            text_args = args.split("|")[1]  # Text
-            if len(lang_args) == 2 and text_args:
-                url = self.config["lingva_url"].format(
-                    source=lang_args[0], target=lang_args[1], query=text_args
+    @loader.unrestricted
+    @loader.ratelimit
+    async def translatecmd(self, message):
+        """Translate text via Yandex Translate"""
+        chat = "@YTranslateBot"
+        reply = await message.get_reply_message()
+        async with message.client.conversation(chat) as conv:
+            text = utils.get_args_raw(message)
+            if reply:
+                text = await message.get_reply_message()
+            try:
+                response = conv.wait_event(
+                    events.NewMessage(incoming=True, from_users=104784211)
                 )
-            elif len(lang_args) == 1 and text_args:
-                url = self.config["lingva_url"].format(
-                    source="auto", target=lang_args[0], query=text_args
-                )
-            else:
-                await utils.answer(message, self.strings["error"])
-                await asyncio.sleep(5)
-                await message.delete()
+                mm = await message.client.send_message(chat, text)
+                response = await response
+                await mm.delete()
+            except YouBlockedUserError:
+                await message.edit("<code>Unblock @YTranslateBot</code>")
                 return
-
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as get:
-                    translated_text = await get.json()
-                    await session.close()
-
-            await utils.answer(message, translated_text["translation"])
-        else:
-            await utils.answer(message, self.strings["error"])
-            await asyncio.sleep(5)
-            await message.delete()
+            await message.edit(str(response.text).split(": ", 1)[1])
+            await message.client(
+                functions.messages.DeleteHistoryRequest(
+                    peer="YTranslateBot", max_id=0, just_clear=False, revoke=True
+                )
+            )
