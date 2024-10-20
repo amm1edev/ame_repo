@@ -1,162 +1,119 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the GNU GPLv3.
+# ( o.o )  🔐 Licensed under the CC BY-NC-SA 4.0.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: weather
-# Description: Checks the weather
-# Get an API key at https://openweathermap.org/appid
-# Author: HitaloSama
+# Author: MoriSummerz
 # Commands:
-# .weather
+# .weathercity | .weather
 # ---------------------------------------------------------------------------------
 
+__version__ = (1, 1, 0)
 
-#    Friendly Telegram (telegram userbot)
-#    Copyright (C) 2018-2019 The Authors
-
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-# requires: pyowm>=3.0.0
+"""
+    █▀▄▀█ █▀█ █▀█ █ █▀ █ █ █▀▄▀█ █▀▄▀█ █▀▀ █▀█
+    █ ▀ █ █▄█ █▀▄ █ ▄█ █▄█ █ ▀ █ █ ▀ █ ██▄ █▀▄
+    Copyright 2022 t.me/morisummermods
+    Licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+"""
+# scope: inline_content
+# requires: requests
+# meta developer: @morisummermods
+# meta banner: https://i.imgur.com/JR6VqYF.png
+# meta pic: https://i.imgur.com/iwoskSb.png
 
 import logging
-import math
+import re
+from urllib.parse import quote_plus
 
-import pyowm
+import requests
+from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
+from telethon.tl.functions.channels import JoinChannelRequest
+from telethon.tl.types import Message
 
 from .. import loader, utils
-from ..utils import escape_html as eh
+from ..inline import GeekInlineQuery, rand
 
 logger = logging.getLogger(__name__)
 
-
-def deg_to_text(deg):
-    if deg is None:
-        return None
-    return [
-        "N",
-        "NNE",
-        "NE",
-        "ENE",
-        "E",
-        "ESE",
-        "SE",
-        "SSE",
-        "S",
-        "SSW",
-        "SW",
-        "WSW",
-        "W",
-        "WNW",
-        "NW",
-        "NNW",
-    ][round(deg / 22.5) % 16]
+n = "\n"
+rus = "ёйцукенгшщзхъфывапролджэячсмитьбю"
 
 
-def round_to_sf(n, digits):
-    return round(n, digits - 1 - int(math.floor(math.log10(abs(n)))))
+def escape_ansi(line):
+    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
+    return ansi_escape.sub("", line)
 
 
-@loader.tds
 class WeatherMod(loader.Module):
-    """Checks the weather
-    Get an API key at https://openweathermap.org/appid"""
+    """Weather module"""
 
-    strings = {
-        "name": "Weather",
-        "provide_api": "<b>Please provide an API key via the configuration mode.</b>",
-        "invalid_temp_units": (
-            "<b>Invalid temperature units provided. Please reconfigure the module.</b>"
-        ),
-        "doc_default_loc": "OpenWeatherMap City ID",
-        "doc_api_key": "API Key from https://openweathermap.org/appid",
-        "doc_temp_units": "Temperature unit as English",
-        "result": (
-            "<b>Weather in {loc} is {w} with a high of {high} and a low of {low},"
-            " averaging at {avg} with {humid}% humidity and a {ws}mph {wd} wind.</b>"
-        ),
-        "unknown": "unknown",
-    }
+    strings = {"name": "Weather"}
 
-    def __init__(self):
-        self.config = loader.ModuleConfig(
-            "DEFAULT_LOCATION",
-            None,
-            lambda m: self.strings("doc_default_loc", m),
-            "API_KEY",
-            None,
-            lambda m: self.strings("doc_api_key", m),
-            "TEMP_UNITS",
-            "celsius",
-            lambda m: self.strings("doc_temp_units", m),
-        )
-        self._owm = None
-
-    def config_complete(self):
-        if self.config["API_KEY"]:
-            self._owm = pyowm.OWM(self.config["API_KEY"]).weather_manager()
-        else:
-            self._owm = None
-
-    @loader.unrestricted
-    @loader.ratelimit
-    async def weathercmd(self, message):
-        """.weather [location]"""
-        if self._owm is None:
-            await utils.answer(message, self.strings("provide_api", message))
+    async def client_ready(self, client, db) -> None:
+        if hasattr(self, "hikka"):
             return
-        args = utils.get_args_raw(message)
-        func = None
-        if not args:
-            func = self._owm.weather_at_id
-            args = [self.config["DEFAULT_LOCATION"]]
-        else:
-            try:
-                args = [int(args)]
-                func = self._owm.weather_at_id
-            except ValueError:
-                coords = utils.get_args_split_by(message, ",")
-                if len(coords) == 2:
-                    try:
-                        args = [int(coord.strip()) for coord in coords]
-                        func = self._owm.weather_at_coords
-                    except ValueError:
-                        pass
-        if func is None:
-            func = self._owm.weather_at_place
-            args = [args]
-        logger.debug(func)
-        logger.debug(args)
-        o = await utils.run_sync(func, *args)
-        logger.debug("Weather at %r is %r", args, o)
+
+        self.db = db
+        self.client = client
         try:
-            w = o.weather
-            temp = w.get_temperature(self.config["TEMP_UNITS"])
-        except ValueError:
-            await utils.answer(message, self.strings("invalid_temp_units", message))
-            return
-        ret = self.strings("result", message).format(
-            loc=eh(o.get_location().get_name()),
-            w=eh(w.get_detailed_status().lower()),
-            high=eh(temp["temp_max"]),
-            low=eh(temp["temp_min"]),
-            avg=eh(temp["temp"]),
-            humid=eh(w.get_humidity()),
-            ws=eh(round_to_sf(w.get_wind("miles_hour")["speed"], 3)),
-            wd=eh(
-                deg_to_text(w.get_wind().get("deg", None))
-                or self.strings("unknown", message)
+            channel = await self.client.get_entity("t.me/morisummermods")
+            await client(JoinChannelRequest(channel))
+        except Exception:
+            logger.error("Can't join morisummermods")
+        try:
+            post = (await client.get_messages("@morisummermods", ids=[17]))[0]
+            await post.react("❤️")
+        except Exception:
+            logger.error("Can't react to t.me/morisummermods")
+
+    async def weathercitycmd(self, message: Message) -> None:
+        """Set default city for forecast"""
+        if args := utils.get_args_raw(message):
+            self.db.set(self.strings["name"], "city", args)
+
+        await utils.answer(
+            message,
+            (
+                "<b>🏙 Your current city: "
+                f"<code>{self.db.get(self.strings['name'], 'city', '🚫 Not specified')}</code></b>"
             ),
         )
-        await utils.answer(message, ret)
+        return
+
+    async def weathercmd(self, message: Message) -> None:
+        """Current forecast for provided city"""
+        city = utils.get_args_raw(message)
+        if not city:
+            city = self.db.get(self.strings["name"], "city", "")
+
+        lang = "ru" if city and city[0].lower() in rus else "en"
+        req = requests.get(f"https://wttr.in/{city}?m&T&lang={lang}")
+        await utils.answer(message, f"<code>{n.join(req.text.splitlines()[:7])}</code>")
+
+    async def weather_inline_handler(self, query: GeekInlineQuery) -> None:
+        """Search city"""
+        args = query.args
+        if not args:
+            args = self.db.get(self.strings["name"], "city", "")
+
+        if not args:
+            return
+
+        lang = "ru" if args and args[0].lower() in rus else "en"
+        req = requests.get(f"https://wttr.in/{quote_plus(args)}?format=3")
+        await query.answer(
+            [
+                InlineQueryResultArticle(
+                    id=rand(20),
+                    title=f"Forecast for {args}",
+                    description=req.text,
+                    input_message_content=InputTextMessageContent(
+                        f'<code>{n.join(requests.get(f"https://wttr.in/{args}?m&T&lang={lang}").text.splitlines()[:7])}</code>',
+                        parse_mode="HTML",
+                    ),
+                )
+            ],
+            cache_time=0,
+        )

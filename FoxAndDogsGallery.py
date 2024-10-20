@@ -1,38 +1,36 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the Copyleft license.
+# ( o.o )  🔓 Not licensed.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: FoxAndDogsGallery
-# Description: 🦊 Foxes, Dogs 🐶 and cats 🐱
-# Author: CakesTwix
+# Author: shadowhikka
 # Commands:
 # .foxes | .dogs | .randomcdf
 # ---------------------------------------------------------------------------------
 
+# █▀ █░█ ▄▀█ █▀▄ █▀█ █░█░█
+# ▄█ █▀█ █▀█ █▄▀ █▄█ ▀▄▀▄▀
 
-"""
+# Copyright 2023 t.me/shadow_modules
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-    █▀▀ ▄▀█ █▄▀ █▀▀ █▀ ▀█▀ █░█░█ █ ▀▄▀
-    █▄▄ █▀█ █░█ ██▄ ▄█ ░█░ ▀▄▀▄▀ █ █░█
-
-    Copyleft 2022 t.me/shadow_geektg                                                           
-    This program is free software; you can redistribute it and/or modify 
-
-"""
-
-__version__ = (1, 0, 1)
-
-# requires: requests
-# meta pic: https://cdn-icons-png.flaticon.com/512/1005/1005340.png
-# meta developer: @shadow_geektg, @cakestwix_mods
-# scope: inline
+# meta developer: @shadow_modules
 # scope: hikka_only
+# meta banner: https://i.imgur.com/nZalKg2.jpeg
 
 import random
 
 import requests
-from telethon.tl.types import Message
+from telethon.tl.types import Message  # type: ignore
 
 from .. import loader, utils
 
@@ -53,17 +51,13 @@ async def photodog() -> str:
 
 async def randomapi():
     randomapis = random.choice(
-        [
-            "https://randomfox.ca/floof",
-            "https://random.dog/woof.json",
-            "http://aws.random.cat/meow",
-        ]
+        ["https://randomfox.ca/floof", "https://random.dog/woof.json"]
     )
     if randomapis == "https://randomfox.ca/floof":
         return (
             await utils.run_sync(requests.get, "https://randomfox.ca/floof")
         ).json()["image"]
-    else:
+    elif randomapis == "https://random.dog/woof.json":
         return (
             await utils.run_sync(requests.get, "https://random.dog/woof.json")
         ).json()["url"]
@@ -71,27 +65,25 @@ async def randomapi():
 
 @loader.tds
 class FoxGalerryMod(loader.Module):
-    """🦊 Foxes, Dogs 🐶 and cats 🐱"""
+    """🦊 Foxes, Dogs 🐶"""
 
     strings = {"name": "FoxGallery"}
 
-    async def foxescmd(self, message: Message) -> None:
+    strings_ru = {
+        "_cls_doc": "🦊 Лисички, Песики 🐶",
+        "_cmd_doc_foxes": "🦊 Лисички",
+        "_cmd_doc_dogs": "🐶 Песики",
+        "_cmd_doc_random": "🦊 Лисички и Песики 🐶",
+    }
+
+    async def foxescmd(self, message: Message):
         """🦊 Sending photos with foxes"""
-        await self.inline.gallery(
-            message,
-            photofox,
-        )
+        await self.inline.gallery(message, photofox)
 
-    async def dogscmd(self, message: Message) -> None:
+    async def dogscmd(self, message: Message):
         """🐶 Sending photos with dogs"""
-        await self.inline.gallery(
-            message,
-            photodog,
-        )
+        await self.inline.gallery(message, photodog)
 
-    async def randomcdfcmd(self, message: Message) -> None:
+    async def randomcdfcmd(self, message: Message):
         """Photos of dogs 🐶 and foxes 🦊"""
-        await self.inline.gallery(
-            message,
-            randomapi,
-        )
+        await self.inline.gallery(message, randomapi)
