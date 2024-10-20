@@ -17,19 +17,18 @@
 # For any inquiries or requests for permissions, please contact codwiz@yandex.ru.
 
 # ---------------------------------------------------------------------------------
-# Name: Article
-# Description: Displays your article Criminal Code of the Russian Federation
+# Name: face
+# Description: Random face
 # Author: @hikka_mods
 # ---------------------------------------------------------------------------------
 # meta developer: @hikka_mods
-# scope: Article
-# scope: Article 0.0.1
+# scope: Api face
+# scope: Api face 0.0.1
 # requires: requests
 # ---------------------------------------------------------------------------------
 
-import requests, json, random
-from typing import Dict
 from hikkatl.types import Message
+import requests
 
 from .. import loader, utils
 
@@ -37,39 +36,34 @@ __version__ = (1, 0, 0)
 
 
 @loader.tds
-class ArticleMod(loader.Module):
-    """Displays your article Criminal Code of the Russian Federation"""
+class face(loader.Module):
+    """random face"""
 
     strings = {
-        "name": "Article",
-        "article": "<emoji document_id=5226512880362332956>📖</emoji> <b>Your article of the Criminal Code of the Russian Federation</b>:\n\n<blockquote>Number {}\n\n{}</blockquote>",
+        "name": "face",
+        "loading": (
+            "<emoji document_id=5348399448017871250>🔍</emoji> I'm looking for you kaomoji"
+        ),
+        "random_face": (
+            "<emoji document_id=5208878706717636743>🗿</emoji> Here is your random one kaomoji\n<code>{}</code>"
+        ),
     }
 
     strings_ru = {
-        "article": "<emoji document_id=5226512880362332956>📖</emoji> <b>Твоя статья УК РФ</b>:\n\n<blockquote>Номер {}\n\n{}</blockquote>",
+        "loading": (
+            "<emoji document_id=5348399448017871250>🔍</emoji> Ищю вам kaomoji"
+        ),
+        "random_face": (
+            "<emoji document_id=5208878706717636743>🗿</emoji> Вот ваш рандомный kaomoji\n<code>{}</code>"
+        ),
     }
 
     @loader.command(
-        ru_doc="Отображается ваша статья Уголовного кодекса Российской Федерации",
-        en_doc="Displays your article Criminal Code of the Russian Federation",
+        ru_doc="Рандом kaomoji",
+        en_doc="Random kaomoji",
     )
-    async def arccmd(self, message: Message):
-        values = self._load_values()
-        if values:
-            random_key = random.choice(list(values.keys()))
-            random_value = values[random_key]
-            await utils.answer(
-                message, self.strings("article").format(random_key, random_value)
-            )
-
-    def _load_values(self) -> Dict[str, str]:
-        url = "https://raw.githubusercontent.com/Codwizer/ReModules/main/assets/zakon.json"
-        try:
-            response = requests.get(url)
-            if response.ok:
-                data = json.loads(response.text)
-                return data
-        except (requests.RequestException, json.JSONDecodeError):
-            pass
-
-        return {}
+    async def rfacecmd(self, message: Message):
+        await utils.answer(message, self.strings("loading"))
+        response = requests.get("https://vsecoder.dev/api/faces")
+        random_face = response.json()["data"]
+        await utils.answer(message, self.strings("random_face").format(random_face))

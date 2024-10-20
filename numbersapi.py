@@ -1,37 +1,40 @@
-# ---------------------------------------------------------------------------------
-#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔓 Not licensed.
-#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
-# ---------------------------------------------------------------------------------
-# Name: numbersapi
-# Author: Codwizer
-# Commands:
-# .num
-# ---------------------------------------------------------------------------------
+# Proprietary License Agreement
+
+# Copyright (c) 2024-29 CodWiz
+
+# Permission is hereby granted to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software for personal and non-commercial purposes, subject to the following conditions:
+
+# 1. The Software may not be modified, altered, or otherwise changed in any way without the explicit written permission of the author.
+
+# 2. Redistribution of the Software, in original or modified form, is strictly prohibited without the explicit written permission of the author.
+
+# 3. The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+# 4. Any use of the Software must include the above copyright notice and this permission notice in all copies or substantial portions of the Software.
+
+# 5. By using the Software, you agree to be bound by the terms and conditions of this license.
+
+# For any inquiries or requests for permissions, please contact codwiz@yandex.ru.
 
 # ---------------------------------------------------------------------------------
 # Name: NumbersAPI
 # Description: Many interesting facts about numbers. Idea @FurryMods
 # Author: @hikka_mods
 # ---------------------------------------------------------------------------------
-
-# 🔒    Licensed under the GNU AGPLv3
-# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
-
 # meta developer: @hikka_mods
 # scope: NumbersAPI
 # scope: NumbersAPI 0.0.1
 # ---------------------------------------------------------------------------------
 
+from hikkatl.types import Message
+from .. import loader, utils
+import requests
 from datetime import datetime
 
-import requests
-from hikkatl.types import Message
-
-from .. import loader, utils
+__version__ = (1, 0, 0)
 
 
-def get_fact_about_number(number, fact_type):
+async def get_fact_about_number(number, fact_type):
     url = f"http://numbersapi.com/{number}/{fact_type}"
     response = requests.get(url)
 
@@ -41,7 +44,7 @@ def get_fact_about_number(number, fact_type):
         return "Извините, не удалось получить факт."
 
 
-def get_fact_about_date(month, day):
+async def get_fact_about_date(month, day):
     date_str = datetime.now().replace(month=month, day=day).strftime("%m/%d")
     url = f"http://numbersapi.com/{date_str}/date"
     response = requests.get(url)
@@ -58,8 +61,11 @@ class NumbersAPI(loader.Module):
 
     strings = {"name": "NumbersAPI"}
 
-    async def numcmd(self, message: Message):
-        """Дает интересный факт про число или дату\nНапример: .num 10 math или .num 01.01 date"""
+    @loader.command(
+        ru_doc="Дает интересный факт про число или дату\nНапример: .num 10 math или .num 01.01 date",
+        en_doc="Gives an interesting fact about a number or date\nexample: .num 10 math or .num 01.01 date",
+    )
+    async def num(self, message: Message):
         args = utils.get_args_raw(message).split()
 
         if len(args) >= 2:

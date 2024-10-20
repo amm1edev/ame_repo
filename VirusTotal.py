@@ -1,45 +1,64 @@
-# ---------------------------------------------------------------------------------
-#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the GNU AGPLv3.
-#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
-# ---------------------------------------------------------------------------------
-# Name: VirusTotal
-# Author: Codwizer
-# Commands:
-# .vt
-# ---------------------------------------------------------------------------------
+# Proprietary License Agreement
+
+# Copyright (c) 2024-29 CodWiz
+
+# Permission is hereby granted to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software for personal and non-commercial purposes, subject to the following conditions:
+
+# 1. The Software may not be modified, altered, or otherwise changed in any way without the explicit written permission of the author.
+
+# 2. Redistribution of the Software, in original or modified form, is strictly prohibited without the explicit written permission of the author.
+
+# 3. The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+# 4. Any use of the Software must include the above copyright notice and this permission notice in all copies or substantial portions of the Software.
+
+# 5. By using the Software, you agree to be bound by the terms and conditions of this license.
+
+# For any inquiries or requests for permissions, please contact codwiz@yandex.ru.
 
 # ---------------------------------------------------------------------------------
 # Name: VirusTotal
 # Description: Checks files for viruses using VirusTotal
 # Author: @hikka_mods
 # ---------------------------------------------------------------------------------
-# 🔒    Licensed under the GNU AGPLv3
-# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
-
 # meta developer: @hikka_mods
 # scope: Api VirusTotal
 # scope: Api VirusTotal 0.0.1
-# requires: json, aiohttp, tempfile
+# requires: json aiohttp tempfile
 # ---------------------------------------------------------------------------------
 
-import json
 import os
-import tempfile
-
 import aiohttp
+import tempfile
+from .. import loader, utils
 from hikkatl.tl.types import Message
 
-from .. import loader, utils
+__version__ = (1, 0, 0)
 
 
+@loader.tds
 class VirusTotalMod(loader.Module):
+    """Checks files for viruses using VirusTotal"""
+
     strings = {
         "name": "VirusTotal",
-        "no_file": (
-            "<emoji document_id=5210952531676504517>🚫</emoji> </b>Вы не выбрали"
-            " файл.</b>"
+        "no_file": "<emoji document_id=5210952531676504517>🚫</emoji> </b>You haven't selected a file.</b>",
+        "download": (
+            "<emoji document_id=5334677912270415274>😑</emoji> </b>Downloading...</b>"
         ),
+        "skan": "<emoji document_id=5325792861885570739>🫥</emoji>  <b>Scanning...</b>",
+        "link": "🦠 VirusTotal Link",
+        "no_virus": "✅ File is clean.",
+        "error": "Scan error.",
+        "no_format": "This format is not supported.",
+        "no_apikey": (
+            "<emoji document_id=5260342697075416641>🚫</emoji> You have not specified an API Key"
+        ),
+        "confing": "Нужен токен с www.virustotal.com/gui/my-apikey",
+    }
+
+    strings_ru = {
+        "no_file": "<emoji document_id=5210952531676504517>🚫</emoji> </b>Вы не выбрали файл.</b>",
         "download": (
             "<emoji document_id=5334677912270415274>😑</emoji> </b>Скачивание...</b>"
         ),
@@ -51,6 +70,7 @@ class VirusTotalMod(loader.Module):
         "no_apikey": (
             "<emoji document_id=5260342697075416641>🚫</emoji> Вы не указали Api Key"
         ),
+        "confing": "Need a token with www.virustotal.com/gui/my-apikey",
     }
 
     def __init__(self):
@@ -63,15 +83,21 @@ class VirusTotalMod(loader.Module):
             )
         )
 
-    @loader.command()
+    @loader.command(
+        ru_doc="<ответ на файл> - Проверяет файлы на наличие вирусов с использованием VirusTotal",
+        en_doc="<file response> - Checks files for viruses using VirusTotal",
+    )
     async def vt(self, message: Message):
-        """<response to the file> - Checks files for viruses using VirusTotal"""
-        reply = await message.get_reply_message()
-        if not reply:
-            await utils.answer(message, self.strings("no_file"))
+        if not message.is_reply:
+            await utils.answer(message, self.strings("no_reply"))
             return
 
-        if self.config["token-vt"] is None:
+        reply = await message.get_reply_message()
+        if not reply.document:
+            await utils.answer(message, self.strings("reply_not_document"))
+            return
+
+        if not self.config.get("token-vt"):
             await utils.answer(message, self.strings("no_apikey"))
             return
 
@@ -80,77 +106,66 @@ class VirusTotalMod(loader.Module):
                 await utils.answer(message, self.strings("download"))
                 file_path = os.path.join(temp_dir, reply.file.name)
                 await reply.download_media(file_path)
-                logging.info(file_path)
 
-                await utils.answer(message, self.strings("skan"))
-                file_name = os.path.basename(file_path)
+                file_extension = os.path.splitext(reply.file.name)[1].lower()
+                allowed_extensions = (
+                    ".jpg",
+                    ".png",
+                    ".ico",
+                    ".mp3",
+                    ".mp4",
+                    ".gif",
+                    ".txt",
+                )
 
-                if file_name not in [
-                    "file.jpg",
-                    "file.png",
-                    "file.ico",
-                    "file.mp3",
-                    "file.mp4",
-                    "file.gif",
-                    "file.txt",
-                ]:
-                    token = self.config["token-vt"]
-                    params = dict(apikey=token)
-
+                if file_extension not in allowed_extensions:
                     try:
+                        token = self.config["token-vt"]
+                        headers = {"x-apikey": token}
+                        params = {"apikey": token}
+
                         with open(file_path, "rb") as file:
-                            files = {"file": (file_name, file)}
-                            data = aiohttp.FormData()
-                            data.add_field("file", file, filename=file_name)
+                            files = {"file": file}
                             async with session.post(
-                                "https://www.virustotal.com/vtapi/v2/file/scan",
-                                data=data,
+                                "https://www.virustotal.com/api/v3/files",
+                                headers=headers,
                                 params=params,
+                                data=files,
                             ) as response:
                                 if response.status == 200:
-                                    false = []
                                     result = await response.json()
-                                    res = (
-                                        (json.dumps(result, sort_keys=False, indent=4))
-                                        .split()[10]
-                                        .split('"')[1]
-                                    )
-                                    params = {"apikey": token, "resource": res}
+                                    data_id = result["data"]["id"]
+
                                     async with session.get(
-                                        "https://www.virustotal.com/vtapi/v2/file/report",
+                                        f"https://www.virustotal.com/api/v3/analyses/{data_id}",
+                                        headers=headers,
                                         params=params,
                                     ) as response:
                                         if response.status == 200:
                                             result = await response.json()
-                                            for key in result["scans"]:
-                                                if result["scans"][key]["detected"]:
-                                                    false.append(
-                                                        f"⛔️ <b>{key}</b>\n ╰"
-                                                        f" <code>{result['scans'][key]['result']}</code>"
+                                            hash = result["meta"]["file_info"]["sha256"]
+                                            detections = []
+                                            for engine, details in result["data"][
+                                                "attributes"
+                                            ]["results"].items():
+                                                if details["category"] == "malicious":
+                                                    detections.append(
+                                                        f"⛔️ <b>{engine}</b>\n ╰ <code>{details['result']}</code>"
                                                     )
                                             out = (
-                                                "\n".join(false)
-                                                if len(false) > 0
+                                                "\n".join(detections)
+                                                if detections
                                                 else self.strings("no_virus")
                                             )
-                                            uyrl = f"https://www.virustotal.com/gui/file/{result['resource']}/detection"
+                                            url = f"https://www.virustotal.com/gui/file/{hash}/detection"
                                             await self.inline.form(
-                                                text=(
-                                                    f"Detections: {len(false)} /"
-                                                    f" {len(result['scans'])}\n\n{out}\n\n"
-                                                ),
+                                                text=f"Detections: {len(detections)} / {len(result['data']['attributes']['results'])}\n\n{out}\n\n",
                                                 message=message,
                                                 reply_markup={
                                                     "text": self.strings("link"),
-                                                    "url": uyrl,
+                                                    "url": url,
                                                 },
                                             )
-                                        else:
-                                            await utils.answer(
-                                                message, self.strings("error")
-                                            )
-                                else:
-                                    await utils.answer(message, self.strings("error"))
                     except Exception as e:
                         await utils.answer(
                             message,

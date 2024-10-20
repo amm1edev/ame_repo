@@ -1,23 +1,26 @@
-# ---------------------------------------------------------------------------------
-#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the GNU AGPLv3.
-#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
-# ---------------------------------------------------------------------------------
-# Name: PastebinAPI
-# Author: Codwizer
-# Commands:
-# .past
-# ---------------------------------------------------------------------------------
+# Proprietary License Agreement
+
+# Copyright (c) 2024-29 CodWiz
+
+# Permission is hereby granted to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software for personal and non-commercial purposes, subject to the following conditions:
+
+# 1. The Software may not be modified, altered, or otherwise changed in any way without the explicit written permission of the author.
+
+# 2. Redistribution of the Software, in original or modified form, is strictly prohibited without the explicit written permission of the author.
+
+# 3. The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+# 4. Any use of the Software must include the above copyright notice and this permission notice in all copies or substantial portions of the Software.
+
+# 5. By using the Software, you agree to be bound by the terms and conditions of this license.
+
+# For any inquiries or requests for permissions, please contact codwiz@yandex.ru.
 
 # ---------------------------------------------------------------------------------
 # Name: PastebinAPI
 # Description: fills in the code on pastebin
 # Author: @hikka_mods
 # ---------------------------------------------------------------------------------
-
-# 🔒    Licensed under the GNU AGPLv3
-# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
-
 # meta developer: @hikka_mods
 # scope: PastebinAPI
 # scope: PastebinAPI 0.0.1
@@ -26,12 +29,13 @@
 
 import asyncio
 import json
-
 import aiohttp
-from hikkatl.tl.types import Message
 from requests import get
+from hikkatl.tl.types import Message
 
 from .. import loader, utils
+
+__version__ = (1, 0, 0)
 
 
 @loader.tds
@@ -41,13 +45,18 @@ class PastebinAPIMod(loader.Module):
     strings = {
         "name": "PastebinAPI",
         "no_reply": (
+            "<emoji document_id=5462882007451185227>🚫</emoji> You didn't specify the text"
+        ),
+        "no_key": "<emoji document_id=5843952899184398024>🚫</emoji> The key was not found",
+        "done": "Your link with the code\n<emoji document_id=5985571061993837069>➡️</emoji> <code>{response_text}</code>",
+    }
+
+    strings_ru = {
+        "no_reply": (
             "<emoji document_id=5462882007451185227>🚫</emoji> Вы не указали текст"
         ),
         "no_key": "<emoji document_id=5843952899184398024>🚫</emoji> Ключ не найден",
-        "done": (
-            "Ваша ссылка с кодом\n<emoji document_id=5985571061993837069>➡️</emoji>"
-            " <code>{response_text}</code>"
-        ),
+        "done": "Ваша ссылка с кодом\n<emoji document_id=5985571061993837069>➡️</emoji> <code>{response_text}</code>",
     }
 
     def __init__(self):
@@ -60,8 +69,11 @@ class PastebinAPIMod(loader.Module):
             )
         )
 
-    async def pastcmd(self, message):
-        """Заливает код в Pastebin"""
+    @loader.command(
+        ru_doc="Заливает код в Pastebin",
+        en_doc="Uploads the code to Pastebin",
+    )
+    async def past(self, message):
         text = utils.get_args(message)
 
         if self.config["pastebin"] is None:

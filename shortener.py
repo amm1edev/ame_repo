@@ -1,33 +1,37 @@
-# ---------------------------------------------------------------------------------
-#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔓 Not licensed.
-#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
-# ---------------------------------------------------------------------------------
-# Name: shortener
-# Author: Codwizer
-# Commands:
-# .shorten | .statcl
-# ---------------------------------------------------------------------------------
+# Proprietary License Agreement
+
+# Copyright (c) 2024-29 CodWiz
+
+# Permission is hereby granted to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software for personal and non-commercial purposes, subject to the following conditions:
+
+# 1. The Software may not be modified, altered, or otherwise changed in any way without the explicit written permission of the author.
+
+# 2. Redistribution of the Software, in original or modified form, is strictly prohibited without the explicit written permission of the author.
+
+# 3. The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+# 4. Any use of the Software must include the above copyright notice and this permission notice in all copies or substantial portions of the Software.
+
+# 5. By using the Software, you agree to be bound by the terms and conditions of this license.
+
+# For any inquiries or requests for permissions, please contact codwiz@yandex.ru.
 
 # ---------------------------------------------------------------------------------
 # Name: Shortener
 # Description: shortening the link
 # Author: @hikka_mods
 # ---------------------------------------------------------------------------------
-
-# 🔒    Licensed under the GNU AGPLv3
-# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
-
-import pyshorteners
-
 # meta developer: @hikka_mods
 # scope: Shortener
 # scope: Shortener 0.0.1
 # requires: pyshorteners
 # ---------------------------------------------------------------------------------
-from hikkatl.types import Message
 
+from hikkatl.types import Message
 from .. import loader, utils
+import pyshorteners
+
+__version__ = (1, 0, 0)
 
 
 @loader.tds
@@ -36,18 +40,15 @@ class Shortener(loader.Module):
 
     strings = {
         "name": "Shortener",
-        "no_api": (
-            "<emoji document_id=5854929766146118183>❌</emoji> Вы не указали api токен с"
-            " сайта <a href='https://app.bitly.com/settings/api/'>bit.ly</a>"
-        ),
-        "statclcmd": (
-            "<emoji document_id=5787384838411522455>📊</emoji> <b>Статистика о переходе"
-            " по этой ссылке:</b> {c}"
-        ),
-        "shortencmd": (
-            "<emoji document_id=5854762571659218443>✅</emoji> <b>Ваша сокращённая"
-            " ссылка готова:</b> <code>{c}</code>"
-        ),
+        "no_api": "<emoji document_id=5854929766146118183>❌</emoji> You have not specified an API token from the site <a href='https://app.bitly.com/settings/api/'>bit.ly</a>",
+        "statclcmd": "<emoji document_id=5787384838411522455>📊</emoji> <b>Statistics on clicks for this link:</b> {c}",
+        "shortencmd": "<emoji document_id=5854762571659218443>✅</emoji> <b>Your shortened link is ready:</b> <code>{c}</code>",
+    }
+
+    strings_ru = {
+        "no_api": "<emoji document_id=5854929766146118183>❌</emoji> Вы не указали api токен с сайта <a href='https://app.bitly.com/settings/api/'>bit.ly</a>",
+        "statclcmd": "<emoji document_id=5787384838411522455>📊</emoji> <b>Статистика о переходе по этой ссылке:</b> {c}",
+        "shortencmd": "<emoji document_id=5854762571659218443>✅</emoji> <b>Ваша сокращённая ссылка готова:</b> <code>{c}</code>",
     }
 
     def __init__(self):
@@ -60,8 +61,11 @@ class Shortener(loader.Module):
             )
         )
 
+    @loader.command(
+        ru_doc="Сократить ссылку через bit.ly",
+        en_doc="Shorten the link via bit.ly",
+    )
     async def shortencmd(self, message: Message):
-        """сократить ссылку через bit.ly"""
         if self.config["token"] is None:
             await utils.answer(message, self.strings("no_api"))
             return
@@ -72,8 +76,11 @@ class Shortener(loader.Module):
             message, self.strings("shortencmd").format(c=s.bitly.short(args))
         )
 
+    @loader.command(
+        ru_doc="Посмотреть статистику ссылки через bit.ly",
+        en_doc="View link statistics via bit.ly",
+    )
     async def statclcmd(self, message: Message):
-        """посмотреть статистику ссылки через bit.ly"""
         if self.config["token"] is None:
             await utils.answer(message, self.strings("no_api"))
             return

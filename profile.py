@@ -1,121 +1,106 @@
-# ---------------------------------------------------------------------------------
-#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the Copyleft license.
-#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
-# ---------------------------------------------------------------------------------
-# Name: profile
-# Author: vsecoder
+# Proprietary License Agreement
+
+# Copyright (c) 2024-29 CodWiz
+
+# Permission is hereby granted to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software for personal and non-commercial purposes, subject to the following conditions:
+
+# 1. The Software may not be modified, altered, or otherwise changed in any way without the explicit written permission of the author.
+
+# 2. Redistribution of the Software, in original or modified form, is strictly prohibited without the explicit written permission of the author.
+
+# 3. The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+# 4. Any use of the Software must include the above copyright notice and this permission notice in all copies or substantial portions of the Software.
+
+# 5. By using the Software, you agree to be bound by the terms and conditions of this license.
+
+# For any inquiries or requests for permissions, please contact codwiz@yandex.ru.
+
+# Name: Profile
+# Description: Module for changing profile data.
+# Author: @nervousmods
 # Commands:
-# .profile
+# .name | .about | .user
 # ---------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------
+# meta developer: @nervousmods, @hikka_mods
+# scope: hikka_only
+# scope: hikka_min 1.5.0
+# -----------------------------------------------------------------------------------
 
-"""
-                                _             
-  __   _____  ___  ___ ___   __| | ___ _ __   
-  \ \ / / __|/ _ \/ __/ _ \ / _` |/ _ \ '__|  
-   \ V /\__ \  __/ (_| (_) | (_| |  __/ |     
-    \_/ |___/\___|\___\___/ \__,_|\___|_|     
-
-    Copyleft 2022 t.me/vsecoder                                                            
-    This program is free software; you can redistribute it and/or modify 
-
-"""
-# meta developer: @vsecoder_m
-# meta pic: https://img.icons8.com/office/344/administrator-male--v1.png
-# meta banner: https://chojuu.vercel.app/api/banner?img=https://img.icons8.com/office/344/administrator-male--v1.png&title=Profilemod&description=Telegram%20Profile%20Statistic
-
-__version__ = (0, 0, 1)
-
-import base64
-import logging
-
-import imgkit
-import requests
-from telethon import functions
-
+from telethon.errors.rpcerrorlist import UsernameOccupiedError
+from telethon.tl.functions.account import (
+    UpdateProfileRequest,
+    UpdateUsernameRequest,
+)
 from .. import loader, utils
 
-logger = logging.getLogger(__name__)
+__version__ = (1, 0, 1)
 
 
 @loader.tds
-class Profilemod(loader.Module):
-    """Module for get beautiful picture profile statistic"""
+class ProfileEditorMod(loader.Module):
+    """This module can change your Telegram profile."""
 
-    strings = {"name": "Profilemod"}
+    strings = {
+        "name": "Profile",
+        "error_format": "Incorrect format of args. Try again.",
+        "done_name": "The new name was successfully unstalled!",
+        "done_bio": "The new bio was successfully unstaled!",
+        "done_username": "The new username was succesfully installed!",
+        "error_occupied": "The new username is already occupied!",
+    }
 
-    def __init__(self):
-        self.config = loader.ModuleConfig(
-            loader.ConfigValue(
-                "background",
-                "https://0x0.st/oSzw.jpg",
-                "Url to background (540x220 is perfect)",
-                validator=loader.validators.Link(),
-            ),
-            loader.ConfigValue(
-                "html_template",
-                "https://raw.githubusercontent.com/vsecoder/hikka_modules/main/assets/profile.html",
-                "link to html template (if you don't know how, don't touch!)",
-                validator=loader.validators.Link(),
-            ),
+    strings_ru = {
+        "error_format": "Неправильный формат аргумента. Попробуйте еще раз.",
+        "done_name": "Новое имя успешно настроено!",
+        "done_bio": "Новое био успешно настроено!",
+        "done_username": "Новое имя пользователя успешно установлено!",
+        "error_occupied": "Новое имя пользователя уже занято!",
+    }
+
+    @loader.command(
+        ru_doc="для того, чтобы сменить свое имя/отчество",
+        en_doc="for change your first/second name",
+    )
+    async def namecmd(self, message):
+        args = utils.get_args_raw(message).split("/")
+
+        if len(args) == 0:
+            return await utils.answer(message, self.strings("error_format"))
+        if len(args) == 1:
+            firstname = args[0]
+            lastname = " "
+        elif len(args) == 2:
+            firstname = args[0]
+            lastname = args[1]
+        await message.client(
+            UpdateProfileRequest(first_name=firstname, last_name=lastname)
         )
-        self.name = self.strings["name"]
+        await utils.answer(message, self.strings("done_name"))
 
-    async def client_ready(self, client, db):
-        self.client = client
-        self.db = db
+    @loader.command(
+        ru_doc="чтобы изменить свою биографию",
+        en_doc="for change your bio",
+    )
+    async def aboutcmd(self, message):
+        args = utils.get_args_raw(message)
+        if not args:
+            return await utils.answer(message, self.strings("error_format"))
+        await message.client(UpdateProfileRequest(about=args))
+        await utils.answer(message, self.strings("done_bio"))
 
-    @loader.unrestricted
-    @loader.ratelimit
-    async def profilecmd(self, message):
-        """
-        - get
-        """
-        chats, channels, bots, users = 0, 0, 0, 0
-        message = await utils.answer(message, "Geting profile info...")
-        async for dialog in self._client.iter_dialogs(ignore_migrated=True):
-            if dialog.is_group:
-                chats += 1
-            elif dialog.is_channel:
-                channels += 1
-            elif dialog.entity.bot:
-                bots += 1
-            else:
-                users += 1
-
-        options = {"crop-w": 540, "crop-h": 220, "encoding": "UTF-8"}
-
-        me = await self._client.get_me()
-        desc = await self._client(functions.users.GetFullUserRequest(me.id))
-
-        message = await utils.answer(message, "Downloading profile photo...")
-        await self._client.download_profile_photo("me", "profile.jpg")
-        message = await utils.answer(message, "Converting profile photo...")
-        base64EncodedStr = base64.b64encode(open("profile.jpg", "rb").read()).decode(
-            "utf-8"
-        )
-
-        message = await utils.answer(message, "Formating info to template...")
-        with open("profile.html", "w") as f:
-            template = requests.get(self.config["html_template"]).text
-            f.write(
-                template.format(
-                    self.config["background"],
-                    base64EncodedStr,
-                    f"@{me.username}",
-                    chats,
-                    channels,
-                    users,
-                    bots,
-                    desc.full_user.about,
-                )
-            )
-
-        message = await utils.answer(message, "Converting to image...")
-        imgkit.from_file("profile.html", "profile.jpg", options=options)
-        message = await utils.answer(message, "Complete:")
-
-        await self._client.send_file(
-            utils.get_chat_id(message),
-            open("profile.jpg", "rb"),
-        )
+    @loader.command(
+        ru_doc="для изменения вашего имени пользователя. Введите значение без '@'",
+        en_doc="for change your username. Enter value without '@'",
+    )
+    async def usercmd(self, message):
+        """- for change your username. Enter value without "@"."""
+        args = utils.get_args_raw(message)
+        if not args:
+            return await utils.answer(message, self.strings("error_format"))
+        try:
+            await message.client(UpdateUsernameRequest(args))
+            await utils.answer(message, self.strings("done_username"))
+        except UsernameOccupiedError:
+            await utils.answer(message, self.strings("error_occupied"))

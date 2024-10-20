@@ -1,13 +1,20 @@
-# ---------------------------------------------------------------------------------
-#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the GNU AGPLv3.
-#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
-# ---------------------------------------------------------------------------------
-# Name: Memes
-# Author: Codwizer
-# Commands:
-# .memes
-# ---------------------------------------------------------------------------------
+# Proprietary License Agreement
+
+# Copyright (c) 2024-29 CodWiz
+
+# Permission is hereby granted to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software for personal and non-commercial purposes, subject to the following conditions:
+
+# 1. The Software may not be modified, altered, or otherwise changed in any way without the explicit written permission of the author.
+
+# 2. Redistribution of the Software, in original or modified form, is strictly prohibited without the explicit written permission of the author.
+
+# 3. The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+# 4. Any use of the Software must include the above copyright notice and this permission notice in all copies or substantial portions of the Software.
+
+# 5. By using the Software, you agree to be bound by the terms and conditions of this license.
+
+# For any inquiries or requests for permissions, please contact codwiz@yandex.ru.
 
 # ---------------------------------------------------------------------------------
 # Name: Meme
@@ -15,28 +22,24 @@
 # Author: @hikka_mods
 # Commands:
 # ---------------------------------------------------------------------------------
-
-# 🔒    Licensed under the GNU AGPLv3
-# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
-
 # meta developer: @hikka_mods
 # scope: Meme
 # scope: Meme 0.0.1
 # ---------------------------------------------------------------------------------
 
 import asyncio
-import json
-import logging
+from urllib.parse import quote_plus
+from datetime import datetime
+from bs4 import BeautifulSoup
+import aiohttp
 import random
 import urllib.request
-from datetime import datetime
-from urllib.parse import quote_plus
-
-import aiohttp
-from bs4 import BeautifulSoup
+import json
 from telethon.tl.types import Message
 
 from .. import loader, utils
+
+__version__ = (1, 0, 0)
 
 
 async def get_random_image():
@@ -61,11 +64,21 @@ class MemesMod(loader.Module):
 
     strings = {
         "name": "Memes",
+        "done": "☄️ Catch the meme",
+        "still": "🔄 Update",
+        "dell": "❌ Close",
+    }
+
+    strings_ru = {
         "done": "☄️ Лови мем",
         "still": "🔄 Обновить",
         "dell": "❌ Закрыть",
     }
 
+    @loader.command(
+        ru_doc="",
+        en_doc="",
+    )
     async def memescmd(self, message: Message):
         img = await get_random_image()
         await self.inline.form(

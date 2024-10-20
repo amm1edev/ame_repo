@@ -1,38 +1,41 @@
-# ---------------------------------------------------------------------------------
-#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the GNU AGPLv3.
-#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
-# ---------------------------------------------------------------------------------
-# Name: AniLibria
-# Author: Codwizer
-# Commands:
-# .arandom
-# ---------------------------------------------------------------------------------
+# Proprietary License Agreement
+
+# Copyright (c) 2024-29 CodWiz
+
+# Permission is hereby granted to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software for personal and non-commercial purposes, subject to the following conditions:
+
+# 1. The Software may not be modified, altered, or otherwise changed in any way without the explicit written permission of the author.
+
+# 2. Redistribution of the Software, in original or modified form, is strictly prohibited without the explicit written permission of the author.
+
+# 3. The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+# 4. Any use of the Software must include the above copyright notice and this permission notice in all copies or substantial portions of the Software.
+
+# 5. By using the Software, you agree to be bound by the terms and conditions of this license.
+
+# For any inquiries or requests for permissions, please contact codwiz@yandex.ru.
 
 # ---------------------------------------------------------------------------------
 # Name: AniLibria
 # Description: Searches and gives random agtme on the AniLibria database.
 # Author: @hikka_mods
 # ---------------------------------------------------------------------------------
-
-# 🔒    Licensed under the GNU AGPLv3
-# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
-
-import datetime
-
-from aiogram.types import CallbackQuery, InlineQueryResultPhoto
-from anilibria import AniLibriaClient
-
 # meta developer: @hikka_mods
 # scope: AniLibria
 # scope: AniLibria 0.0.1
 # requires: anilibria.py
 # ---------------------------------------------------------------------------------
+
 from .. import loader, main
 from ..inline.types import InlineQuery
 from ..utils import rand
+from aiogram.types import InlineQueryResultPhoto, CallbackQuery
+from anilibria import AniLibriaClient
+import datetime
 
 ani_client = AniLibriaClient()
+__version__ = (1, 0, 0)
 
 
 @loader.tds
@@ -41,12 +44,21 @@ class AniLibriaMod(loader.Module):
 
     strings = {
         "name": "AniLibria",
-        "announce": "<b>Анонс</b> :",
-        "status": "<b>Статус</b> :",
-        "type": "<b>Тип</b> :",
-        "genres": "<b>Жанры</b> :",
-        "favorite": "<b>Избранное &lt;3</b> :",  # &lt; == <
-        "season": "<b>Сезон</b> :",
+        "announce": "<b>The announcement</b>:",
+        "status": "<b>Status</b>:",
+        "type": "<b>Type</b>:",
+        "genres": "<b>Genres</b>:",
+        "favorite": "<b>Favourites &lt;3</b>:",  # &lt; == <
+        "season": "<b>Season</b>:",
+    }
+
+    strings_ru = {
+        "announce": "<b>Анонс</b>:",
+        "status": "<b>Статус</b>:",
+        "type": "<b>Тип</b>:",
+        "genres": "<b>Жанры</b>:",
+        "favorite": "<b>Избранное &lt;3</b>:",  # &lt; == <
+        "season": "<b>Сезон</b>:",
     }
 
     link = "https://anilibria.tv"
@@ -54,8 +66,11 @@ class AniLibriaMod(loader.Module):
     async def client_ready(self, client, db) -> None:
         self._client = client
 
-    async def arandomcmd(self, message) -> None:
-        """Возвращает случайный тайтл из базы"""
+    @loader.command(
+        ru_doc="Возвращает случайный тайтл из базы",
+        en_doc="Returns a random title from the database",
+    )
+    async def arandom(self, message) -> None:
         anime_title = await ani_client.get_random_title()
 
         text = f"{anime_title.names.ru} \n"
@@ -96,10 +111,11 @@ class AniLibriaMod(loader.Module):
             silent=True,
         )
 
+    @loader.command(
+        ru_doc="Возвращает список найденных по названию тайтлов",
+        en_doc="Returns a list of titles found by name",
+    )
     async def asearch_inline_handler(self, query: InlineQuery) -> None:
-        """
-        Возвращает список найденных по названию тайтлов
-        """
         text = query.args
 
         if not text:
@@ -112,9 +128,7 @@ class AniLibriaMod(loader.Module):
             title_text = f"{anime_title.names.ru} | {anime_title.names.en}\n"
             title_text += f"{self.strings['status']} {anime_title.status.string}\n\n"
             title_text += f"{self.strings['type']} {anime_title.type.full_string}\n"
-            title_text += (
-                f"{self.strings['season']} {anime_title.season.string} {anime_title.season.year}\n"
-            )
+            title_text += f"{self.strings['season']} {anime_title.season.string} {anime_title.season.year}\n"
             title_text += f"{self.strings['genres']} {' '.join(anime_title.genres)}\n\n"
 
             title_text += f"<code>{anime_title.description}</code>\n\n"

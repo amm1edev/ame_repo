@@ -1,13 +1,20 @@
-# ---------------------------------------------------------------------------------
-#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the GNU AGPLv3.
-#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
-# ---------------------------------------------------------------------------------
-# Name: Music
-# Author: Codwizer
-# Commands:
-# .ym | .vkm
-# ---------------------------------------------------------------------------------
+# Proprietary License Agreement
+
+# Copyright (c) 2024-29 CodWiz
+
+# Permission is hereby granted to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software for personal and non-commercial purposes, subject to the following conditions:
+
+# 1. The Software may not be modified, altered, or otherwise changed in any way without the explicit written permission of the author.
+
+# 2. Redistribution of the Software, in original or modified form, is strictly prohibited without the explicit written permission of the author.
+
+# 3. The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the Software or the use or other dealings in the Software.
+
+# 4. Any use of the Software must include the above copyright notice and this permission notice in all copies or substantial portions of the Software.
+
+# 5. By using the Software, you agree to be bound by the terms and conditions of this license.
+
+# For any inquiries or requests for permissions, please contact codwiz@yandex.ru.
 
 # ---------------------------------------------------------------------------------
 # Name: Music
@@ -16,15 +23,14 @@
 # Commands:
 # ym / vkm
 # ---------------------------------------------------------------------------------
-
-# 🔒    Licensed under the GNU AGPLv3
-# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
-
 # meta developer: @hikka_mods
 # scope: Music
 # scope: Music 0.0.1
 # ---------------------------------------------------------------------------------
+
 from .. import loader, utils
+
+__version__ = (1, 0, 0)
 
 
 @loader.tds
@@ -34,44 +40,30 @@ class MusicMod(loader.Module):
     strings = {
         "name": "Music",
         "nenashel": (
-            "<emoji document_id=5337117114392127164>🤷‍♂</emoji> <b>And what to look"
-            " for?</b>"
+            "<emoji document_id=5337117114392127164>🤷‍♂</emoji> <b>And what should I look for?</b>"
         ),
-        "searching": (
-            "<emoji document_id=4918235297679934237>⌨️</emoji> <b>Search...</b>"
-        ),
-        "done": (
-            "<emoji document_id=5336965905773504919>🗣</emoji> <b>Maybe this is the"
-            " track you were looking for</b>"
-        ),
-        "error": (
-            "<emoji document_id=5228947933545635555>😫</emoji> <b>I couldn't find a"
-            " track with the title <code>{}</code><b>"
-        ),
+        "searching": "<emoji document_id=4918235297679934237>⌨️</emoji> <b>Searching...</b>",
+        "done": "<emoji document_id=5336965905773504919>🗣</emoji> <b>Perhaps this is the track you were looking for</b>",
+        "error": "<emoji document_id=5228947933545635555>😫</emoji> <b>I couldn't find a track with the title <code>{}</code></b>",
     }
 
     strings_ru = {
         "nenashel": (
             "<emoji document_id=5337117114392127164>🤷‍♂</emoji> <b>А что искать то?</b>"
         ),
-        "searching": (
-            "<emoji document_id=4918235297679934237>⌨️</emoji> <b>Поиск...</b>"
-        ),
-        "done": (
-            "<emoji document_id=5336965905773504919>🗣</emoji> <b>Возможно, это тот"
-            " трек, который вы искали</b>"
-        ),
-        "error": (
-            "<emoji document_id=5228947933545635555>😫</emoji> <b>Я не смог найти трек с"
-            " названием <code>{}</code><b>"
-        ),
+        "searching": "<emoji document_id=4918235297679934237>⌨️</emoji> <b>Поиск...</b>",
+        "done": "<emoji document_id=5336965905773504919>🗣</emoji> <b>Возможно, это тот трек, который вы искали</b>",
+        "error": "<emoji document_id=5228947933545635555>😫</emoji> <b>Я не смог найти трек с названием <code>{}</code><b>",
     }
 
+    @loader.command(
+        ru_doc="Найти трек по названию из Yandex music",
+        en_doc="Find a track by name from Yandex music",
+    )
     async def ymcmd(self, message):
-        """- найти трек по названию из Yandex music"""
         args = utils.get_args_raw(message)
         r = await message.get_reply_message()
-        bot = "@music_yandex_bot"
+        bot = "@Yandex_music_download_bot"
         if not args:
             return await message.edit(self.strings("nenashel"))
         try:
@@ -97,8 +89,11 @@ class MusicMod(loader.Module):
                 message.chat_id, self.strings("error").format(args=args)
             )
 
+    @loader.command(
+        ru_doc="Найти трек по названию из VK",
+        en_doc="Find a track by name from VK",
+    )
     async def vkmcmd(self, message):
-        """- найти трек по названию из VK"""
         args = utils.get_args_raw(message)
         r = await message.get_reply_message()
         bot = "@vkmusic_bot"
