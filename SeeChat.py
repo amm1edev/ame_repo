@@ -5,7 +5,7 @@
 # ---------------------------------------------------------------------------------
 # Name: SeeChat
 # Description: Tracking in all PM chats.
-# Author: trololo65
+# Author: Yahikoro
 # Commands:
 # .seechat | .setchat | .seechats | .gsee | .delsee
 # .excsee  | .exclist

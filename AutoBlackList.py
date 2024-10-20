@@ -5,13 +5,11 @@
 # ---------------------------------------------------------------------------------
 # Name: AutoBlackList
 # Description: Кидает всех неконтактов в ЧС.
-# Author: SekaiYoneya
+# Author: Yahikoro
 # Commands:
 # .autobl | .autoblstatus | .autodelchat
 # ---------------------------------------------------------------------------------
 
-
-# @Sekai_Yoneya
 
 from telethon.tl.functions.contacts import BlockRequest
 from telethon.tl.functions.messages import ReportSpamRequest
@@ -32,13 +30,13 @@ class AutoBlackListMod(loader.Module):
         self.db = db
 
     async def autoblcmd(self, message):
-        """Включить/выключить режим"""
+        """Включить/выключить режим AutoBlackList"""
         args = utils.get_args_raw(message)
         autobl = self.db.get("AutoBlackList", "status", False)
         if args:
             self.db.set("AutoBlackList", "status", True)
             self.db.set("AutoBlackList", "message", str(args))
-            return await message.edit("<b>[AutoBlackList]</b> Активирован!")
+            return await message.edit("<b>[AutoBlackList Mode]</b> Активирован!")
 
         if autobl == False:
             self.db.set("AutoBlackList", "status", True)
@@ -46,9 +44,8 @@ class AutoBlackListMod(loader.Module):
                 "AutoBlackList",
                 "message",
                 (
-                    "<b>Привет! К сожалению, я не принимаю сообщения в личке от тех,"
-                    " кто находится не в контактах, поэтому ты был(-а) занесён(-а) в"
-                    " чёрный список!</b>"
+                    "<b>Привет, я не принимаю личные сообщение. К сожалению, ты летишь"
+                    " в ЧС + RP.</b>"
                 ),
             )
             return await message.edit("<b>[AutoBlackList Mode]</b> Активирован!")
@@ -58,7 +55,7 @@ class AutoBlackListMod(loader.Module):
     async def autoblstatuscmd(self, message):
         """Проверить статус AutoBlackList"""
         await message.edit(
-            "<b>[AutoBlackList - Status]</b>\n\n"
+            "<b>[AutoBlackList Mode - Status]</b>\n\n"
             f"<b>Кидать в ЧС</b> - {self.db.get('AutoBlackList', 'status')}\n"
             f"<b>Удалять чаты</b> - {self.db.get('AutoBlackList', 'delchat')}"
         )
