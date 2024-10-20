@@ -1,12 +1,12 @@
 # ---------------------------------------------------------------------------------
 #  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔓 Not licensed.
+# ( o.o )  🔐 Licensed under the GNU AGPLv3.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: Among
-# Author: DarkModules
+# Author: DziruModules
 # Commands:
-# Failed to parse
+# .among
 # ---------------------------------------------------------------------------------
 
 #
@@ -16,8 +16,8 @@
 # 🌐 https://www.gnu.org/licenses/agpl-3.0.html
 
 # meta developer: @dziru
-# meta pic: https://te.legra.ph/file/17f9f1dcfeca1242bb353.jpg
-# meta banner: https://te.legra.ph/file/17f9f1dcfeca1242bb353.jpg
+# meta pic: https://raw.githubusercontent.com/DziruModules/assets/master/DziruModules.jpg
+# meta banner: https://raw.githubusercontent.com/DziruModules/assets/master/Among.png
 # scope: hikka_min 1.5.0
 # scope: hikka_only
 # version: 1.0

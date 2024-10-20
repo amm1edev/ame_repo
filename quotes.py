@@ -1,582 +1,448 @@
-# ---------------------------------------------------------------------------------
-#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
-# ( o.o )  🔐 Licensed under the GNU AGPLv3.
-#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
-# ---------------------------------------------------------------------------------
-# Name: quotes
-# Author: anon97945
-# Commands:
-# .cquotes | .quote | .fquote
-# ---------------------------------------------------------------------------------
+"""
+    Copyright 2021 t.me/Fl1yd, t.me/spypm
+    Licensed under the Affero General Public License v3.0
 
-# =^..^= Proxied library: https://raw.githubusercontent.com/anon97945/hikka-libs/master/apodiktum_library.py -> https://heta.hikariatama.ru/libs/shino_zQTeajVlqqSiRAWTwXnY.py
+    Authors are not responsible for any consequences caused by using this
+    software or any of its parts.
+"""
 
-__version__ = (2, 1, 0)
-
-
-# ▄▀█ █▄ █ █▀█ █▄ █ █▀█ ▀▀█ █▀█ █ █ █▀
-# █▀█ █ ▀█ █▄█ █ ▀█ ▀▀█   █ ▀▀█ ▀▀█ ▄█
-#
-#           © Copyright 2023
-#
-#        developed by @anon97945
-#
-#     https://t.me/apodiktum_modules
-#      https://github.com/anon97945
-#
-# 🔒 Licensed under the GNU AGPLv3
-# 🌐 https://www.gnu.org/licenses/agpl-3.0.html
-
-# Original author: @mishase
-# API author: @mishase
-
-# requires: requests Pillow cryptg
-
-import contextlib
-import hashlib
+import base64
 import io
 import json
-import logging
+from time import gmtime
+from typing import List, Union
 
-import PIL
 import requests
-from telethon import utils
-from telethon.tl.types import (
-    ChannelParticipantCreator,
-    ChannelParticipantsAdmins,
-    ChatPhotoEmpty,
-    DocumentAttributeSticker,
-    Message,
-    MessageEntityBold,
-    MessageEntityBotCommand,
-    MessageEntityCashtag,
-    MessageEntityCode,
-    MessageEntityHashtag,
-    MessageEntityItalic,
-    MessageEntityMention,
-    MessageEntityMentionName,
-    MessageEntityPhone,
-    MessageEntityStrike,
-    MessageEntityTextUrl,
-    MessageEntityUnderline,
-    MessageEntityUrl,
-    MessageMediaDocument,
-    MessageMediaPhoto,
-    MessageMediaWebPage,
-    PeerBlocked,
-    PeerChannel,
-    PeerChat,
-    PeerUser,
-    User,
-)
-from telethon.utils import get_display_name
+import telethon
+from telethon.tl import types
+from telethon.tl.patched import Message
 
 from .. import loader, utils
 
-logger = logging.getLogger(__name__)
 
-null = None
-false = False
-true = True
+def get_message_media(message: Message):
+    return (
+        message.photo
+        or message.sticker
+        or message.video
+        or message.video_note
+        or message.gif
+        or message.web_preview
+        if message and message.media
+        else None
+    )
 
-PIL.Image.MAX_IMAGE_PIXELS = null
+
+def get_entities(entities: types.TypeMessageEntity):
+    # coded by @droox
+    r = []
+    if entities:
+        for entity in entities:
+            entity = entity.to_dict()
+            entity["type"] = entity.pop("_").replace("MessageEntity", "").lower()
+            r.append(entity)
+    return r
 
 
-class dict(dict):
-    def __setattr__(self, attr, value):
-        self[attr] = value
+def get_message_text(message: Message, reply: bool = False):
+    return (
+        "📷 Фото"
+        if message.photo and reply
+        else (
+            message.file.emoji + " Стикер"
+            if message.sticker and reply
+            else (
+                "📹 Видеосообщение"
+                if message.video_note and reply
+                else (
+                    "📹 Видео"
+                    if message.video and reply
+                    else (
+                        "🖼 GIF"
+                        if message.gif and reply
+                        else (
+                            "📊 Опрос"
+                            if message.poll
+                            else (
+                                "📍 Местоположение"
+                                if message.geo
+                                else (
+                                    "👤 Контакт"
+                                    if message.contact
+                                    else (
+                                        "🎵 Голосовое сообщение:"
+                                        f" {strftime(message.voice.attributes[0].duration)}"
+                                        if message.voice
+                                        else (
+                                            "🎧 Музыка:"
+                                            f" {strftime(message.audio.attributes[0].duration)} |"
+                                            f" {message.audio.attributes[0].performer} -"
+                                            f" {message.audio.attributes[0].title}"
+                                            if message.audio
+                                            else (
+                                                f"💾 Файл: {message.file.name}"
+                                                if type(message.media)
+                                                == types.MessageMediaDocument
+                                                and not get_message_media(message)
+                                                else (
+                                                    f"{message.media.emoticon} Дайс:"
+                                                    f" {message.media.value}"
+                                                    if type(message.media)
+                                                    == types.MessageMediaDice
+                                                    else (
+                                                        "Service message:"
+                                                        f" {message.action.to_dict()['_']}"
+                                                        if type(message)
+                                                        == types.MessageService
+                                                        else ""
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+
+
+def strftime(time: Union[int, float]):
+    t = gmtime(time)
+    return (
+        f"{t.tm_hour:02d}:" if t.tm_hour > 0 else ""
+    ) + f"{t.tm_min:02d}:{t.tm_sec:02d}"
 
 
 @loader.tds
-class ApodiktumQuotesMod(loader.Module):
-    """Quote a message using Mishase Quotes API"""
+class ShitQuotesMod(loader.Module):
+    """
+    Quotes by @sh1tchannel
+    """
 
     strings = {
-        "name": "Apo-Quotes",
-        "developer": "@anon97945",
-        "_cfg_msg_limit": "Messages limit",
-        "_cfg_max_width": "Max width (px)",
-        "_cfg_scale_factor": "Scale factor",
-        "_cfg_square_avatar": "Square avatar",
-        "_cfg_text_color": "Text color",
-        "_cfg_reply_line_color": "Reply line color",
-        "_cfg_admin_title_color": "Admin title color",
-        "_cfg_message_border_radius": "Message radius (px)",
-        "_cfg_reply_thumb_border_radius": "Reply thumbnail radius (px)",
-        "_cfg_picture_border_radius": "Picture radius (px)",
-        "_cfg_background_color": "Background color",
+        "name": "SQuotes",
+        "no_reply": "<b>[SQuotes]</b> No reply",
+        "api_error": "<b>[SQuotes]</b> API error",
+        "no_args_or_reply": "<b>[SQuotes]</b> No args or reply",
+        "args_error": (
+            "<b>[SQuotes]</b> An error ocurred while parsing args. Request was:"
+            " <code>{}</code>"
+        ),
     }
 
-    strings_de = {}
+    async def client_ready(self, client: telethon.TelegramClient, db: dict) -> None:
+        self.client = client
+        self.db = db
+        self.api_endpoint = "https://quotes.fl1yd.su/generate"
+        self.settings = self.get_settings()
 
-    strings_ru = {}
-
-    all_strings = {
-        "strings": strings,
-        "strings_en": strings,
-        "strings_de": strings_de,
-        "strings_ru": strings_ru,
-    }
-
-    changes = {}
-
-    def __init__(self):
-        self.config = loader.ModuleConfig(
-            loader.ConfigValue(
-                "QUOTE_MESSAGES_LIMIT",
-                50,
-                doc=lambda: self.strings("_cfg_msg_limit"),
-                validator=loader.validators.Integer(),
-            ),
-            # "QUOTE_MESSAGES_LIMIT",
-            # 50,
-            # "Messages limit",
-            loader.ConfigValue(
-                "MAX_WIDTH",
-                384,
-                doc=lambda: self.strings("_cfg_max_width"),
-                validator=loader.validators.Integer(),
-            ),
-            # "MAX_WIDTH",
-            # 384,
-            # "Max width (px)",
-            loader.ConfigValue(
-                "SCALE_FACTOR",
-                5,
-                doc=lambda: self.strings("_cfg_scale_factor"),
-                validator=loader.validators.Integer(),
-            ),
-            # "SCALE_FACTOR",
-            # 5,
-            # "Scale factor",
-            loader.ConfigValue(
-                "SQUARE_AVATAR",
-                False,
-                doc=lambda: self.strings("_cfg_square_avatar"),
-                validator=loader.validators.Boolean(),
-            ),
-            # "SQUARE_AVATAR",
-            # false,
-            # "Square avatar",
-            loader.ConfigValue(
-                "TEXT_COLOR",
-                "white",
-                doc=lambda: self.strings("_cfg_text_color"),
-                validator=loader.validators.String(),
-            ),
-            # "TEXT_COLOR",
-            # "white",
-            # "Text color",
-            loader.ConfigValue(
-                "REPLY_LINE_COLOR",
-                "white",
-                doc=lambda: self.strings("_cfg_reply_line_color"),
-                validator=loader.validators.String(),
-            ),
-            # "REPLY_LINE_COLOR",
-            # "white",
-            # "Reply line color",
-            loader.ConfigValue(
-                "REPLY_THUMB_BORDER_RADIUS",
-                2,
-                doc=lambda: self.strings("_cfg_reply_thumb_border_radius"),
-                validator=loader.validators.Integer(),
-            ),
-            # "REPLY_THUMB_BORDER_RADIUS",
-            # 2,
-            # "Reply thumbnail radius (px)",
-            loader.ConfigValue(
-                "ADMINTITLE_COLOR",
-                "#969ba0",
-                doc=lambda: self.strings("_cfg_admin_title_color"),
-                validator=loader.validators.String(),
-            ),
-            # "ADMINTITLE_COLOR",
-            # "#969ba0",
-            # "Admin title color",
-            loader.ConfigValue(
-                "MESSAGE_BORDER_RADIUS",
-                10,
-                doc=lambda: self.strings("_cfg_message_border_radius"),
-                validator=loader.validators.Integer(),
-            ),
-            # "MESSAGE_BORDER_RADIUS",
-            # 10,
-            # "Message radius (px)",
-            loader.ConfigValue(
-                "PICTURE_BORDER_RADIUS",
-                8,
-                doc=lambda: self.strings("_cfg_picture_border_radius"),
-                validator=loader.validators.Integer(),
-            ),
-            # "PICTURE_BORDER_RADIUS",
-            # 8,
-            # "Picture radius (px)",
-            loader.ConfigValue(
-                "BACKGROUND_COLOR",
-                "#162330",
-                doc=lambda: self.strings("_cfg_background_color"),
-                validator=loader.validators.String(),
-            ),
-            # "BACKGROUND_COLOR",
-            # "#162330",
-            # "Background color",
-        )
-
-    async def client_ready(self):
-        self.apo_lib = await self.import_lib(
-            "https://raw.githubusercontent.com/anon97945/hikka-libs/master/apodiktum_library.py",
-            suspend_on_error=True,
-        )
-        await self.apo_lib.migrator.auto_migrate_handler(
-            self.__class__.__name__,
-            self.strings("name"),
-            self.changes,
-            self.config["auto_migrate"],
-        )
-
-    async def cquotescmd(self, message: Message):
+    async def qcmd(self, message: Message) -> None:
         """
-        This will open the config for the module.
+        <reply> [quantity] [!file] [color] - Create nice quote from message(-s)
         """
-        name = self.strings("name")
-        await self.allmodules.commands["config"](
-            await utils.answer(message, f"{self.get_prefix()}config {name}")
-        )
 
-    async def quotecmd(self, msg):
-        """Quote a message. Args: .<count> .file"""
-        args = utils.get_args_raw(msg)
-        reply = await msg.get_reply_message()
-
-        if not reply:
-            return await msg.edit("No reply message")
-
-        if not msg.out:
-            msg = await msg.reply("_")
-
-        count = 1
-        forceDocument = false
-
-        if args:
-            args = args.split()
-            forceDocument = "file" in args
-            with contextlib.suppress(StopIteration):
-                count = next(int(arg) for arg in args if arg.isdigit())
-                count = max(1, min(self.config["QUOTE_MESSAGES_LIMIT"], count))
-        messagePacker = MessagePacker(self._client)
-
-        if count == 1:
-            await msg.edit("<b>Processing...</b>")
-            await messagePacker.add(reply)
-        if count > 1:
-            it = self._client.iter_messages(
-                reply.peer_id,
-                offset_id=reply.id,
-                reverse=true,
-                add_offset=1,
-                limit=count,
-            )
-
-            i = 1
-            async for message in it:
-                await msg.edit(f"<b>Processing {i}/{count}</b>")
-                i += 1
-                await messagePacker.add(message)
-
-        messages = messagePacker.messages
-
-        if not messages:
-            return await msg.edit("No messages to quote")
-
-        files = [("files", f) for f in messagePacker.files.values()]
-        if not files:
-            files.append(("files", bytearray()))
-
-        await msg.edit("<b>API Processing...</b>")
-
-        resp = await utils.run_sync(
-            requests.post,
-            "https://quotes.mishase.dev/create",
-            data={
-                "data": json.dumps(
-                    {
-                        "messages": messages,
-                        "maxWidth": self.config["MAX_WIDTH"],
-                        "scaleFactor": self.config["SCALE_FACTOR"],
-                        "squareAvatar": self.config["SQUARE_AVATAR"],
-                        "textColor": self.config["TEXT_COLOR"],
-                        "replyLineColor": self.config["REPLY_LINE_COLOR"],
-                        "adminTitleColor": self.config["ADMINTITLE_COLOR"],
-                        "messageBorderRadius": self.config["MESSAGE_BORDER_RADIUS"],
-                        "replyThumbnailBorderRadius": self.config[
-                            "REPLY_THUMB_BORDER_RADIUS"
-                        ],
-                        "pictureBorderRadius": self.config["PICTURE_BORDER_RADIUS"],
-                        "backgroundColor": self.config["BACKGROUND_COLOR"],
-                    }
-                ),
-                "moduleBuild": null,
-            },
-            files=files,
-            timeout=99,
-        )
-
-        if resp.status_code == 418:
-            logger.error("API Error: %s", resp.text)
-            msg.delete()
+        args: List[str] = utils.get_args(message)
+        if not await message.get_reply_message():
+            await utils.answer(message, self.strings["no_reply"])
             return
 
-        await msg.edit("<b>Sending...</b>")
+        isFile = "!file" in args
+        [count] = [int(arg) for arg in args if arg.isdigit() and int(arg) > 0] or [1]
+        [bg_color] = [arg for arg in args if arg != "!file" and not arg.isdigit()] or [
+            self.settings["bg_color"]
+        ]
 
-        image = io.BytesIO()
-        image.name = "quote.webp"
+        payload = {
+            "messages": await self.quote_parse_messages(message, count),
+            "quote_color": bg_color,
+            "text_color": self.settings["text_color"],
+        }
 
-        PIL.Image.open(io.BytesIO(resp.content)).save(image, "WEBP")
-        image.seek(0)
-        await self._client.send_message(
-            msg.peer_id,
-            file=image,
-            force_document=forceDocument,
-            reply_to=utils.get_topic(msg),
-        )
-        await msg.delete()
+        r = await self._api_request(payload)
+        if r.status_code != 200:
+            await utils.answer(message, self.strings["api_error"])
+            return
 
-    async def fquotecmd(self, msg):
-        """Fake message quote. Args: @<username>/<id>/<reply> <text>"""
-        args = utils.get_args_raw(msg)
-        reply = await msg.get_reply_message()
-        splitArgs = args.split(maxsplit=1)
-        if len(splitArgs) == 2 and (
-            splitArgs[0].startswith("@") or splitArgs[0].isdigit()
-        ):
-            user = (
-                splitArgs[0][1:] if splitArgs[0].startswith("@") else int(splitArgs[0])
+        quote = io.BytesIO(r.content)
+        quote.name = "SQuote" + (".png" if isFile else ".webp")
+
+        await utils.answer(message, quote, force_document=isFile)
+        await (
+            message[0] if isinstance(message, (list, tuple, set)) else message
+        ).delete()
+
+    async def quote_parse_messages(self, message: Message, count: int):
+        payloads = []
+        messages = [
+            msg
+            async for msg in self.client.iter_messages(
+                message.chat_id,
+                count,
+                reverse=True,
+                add_offset=1,
+                offset_id=(await message.get_reply_message()).id,
             )
-            text = splitArgs[1]
-        elif reply:
-            user = reply.sender_id
-            text = args
-        else:
-            return await msg.edit("Incorrect args")
+        ]
+
+        for message in messages:
+            avatar = rank = reply_id = reply_name = reply_text = None
+            entities = get_entities(message.entities)
+
+            if message.fwd_from:
+                if message.fwd_from.from_id:
+                    if type(message.fwd_from.from_id) == types.PeerChannel:
+                        user_id = message.fwd_from.from_id.channel_id
+                    else:
+                        user_id = message.fwd_from.from_id.user_id
+                    try:
+                        user = await self.client.get_entity(user_id)
+                    except Exception:
+                        name, avatar = await self.get_profile_data(message.sender)
+                        return (
+                            (
+                                "Вот блин, произошла ошибка. Возможно на этом канале"
+                                " тебя забанили, и невозможно получить информацию."
+                            ),
+                            None,
+                            message.sender.id,
+                            name,
+                            avatar,
+                            "ошибка :(",
+                            None,
+                            None,
+                            None,
+                            None,
+                        )
+                    name, avatar = await self.get_profile_data(user)
+                    user_id = user.id
+
+                elif name := message.fwd_from.from_name:
+                    user_id = message.chat_id
+            else:
+                if reply := await message.get_reply_message():
+                    reply_id = reply.sender.id
+                    reply_name = telethon.utils.get_display_name(reply.sender)
+                    reply_text = get_message_text(reply, True) + (
+                        ". " + reply.raw_text
+                        if reply.raw_text and get_message_text(reply, True)
+                        else reply.raw_text or ""
+                    )
+
+                user = await self.client.get_entity(message.sender)
+                name, avatar = await self.get_profile_data(user)
+                user_id = user.id
+
+                if message.is_group and message.is_channel:
+                    admins = await self.client.get_participants(
+                        message.chat_id, filter=types.ChannelParticipantsAdmins
+                    )
+                    if user in admins:
+                        admin = admins[admins.index(user)].participant
+                        rank = admin.rank or (
+                            "creator"
+                            if type(admin) == types.ChannelParticipantCreator
+                            else "admin"
+                        )
+
+            media = await self.client.download_media(
+                get_message_media(message), bytes, thumb=-1
+            )
+            media = base64.b64encode(media).decode() if media else None
+
+            via_bot = message.via_bot.username if message.via_bot else None
+            text = (message.raw_text or "") + (
+                (
+                    "\n\n" + get_message_text(message)
+                    if message.raw_text
+                    else get_message_text(message)
+                )
+                if get_message_text(message)
+                else ""
+            )
+
+            payloads.append(
+                {
+                    "text": text,
+                    "media": media,
+                    "entities": entities,
+                    "author": {
+                        "id": user_id,
+                        "name": name,
+                        "avatar": avatar,
+                        "rank": rank or "",
+                        "via_bot": via_bot,
+                    },
+                    "reply": {"id": reply_id, "name": reply_name, "text": reply_text},
+                }
+            )
+
+        return payloads
+
+    async def fsqcmd(self, message: Message):
+        """<@ / ID> + <text> + -r + <@ / ID> + <text>; <args> - Create fake quote"""
+
+        args: str = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
+        if not (args or reply):
+            await utils.answer(message, self.strings["no_args_or_reply"])
+            return
 
         try:
-            uid = (await self._client.get_entity(user)).id
-        except Exception:
-            return await msg.edit("User not found")
+            payload = await self.fakequote_parse_messages(args, reply)
+        except (IndexError, ValueError):
+            await utils.answer(message, self.strings["args_error"].format(message.text))
+            return
 
-        async def getMessage():
-            return Message(0, uid, message=text)
+        payload = {
+            "messages": payload,
+            "quote_color": self.settings["bg_color"],
+            "text_color": self.settings["text_color"],
+        }
 
-        msg.message = ""
-        msg.get_reply_message = getMessage
+        r = await self._api_request(payload)
+        if r.status_code != 200:
+            await utils.answer(message, self.strings["api_error"])
+            return
 
-        await self.quotecmd(msg)
+        quote = io.BytesIO(r.content)
+        quote.name = "SQuote.webp"
 
+        await utils.answer(message, quote)
+        await (
+            message[0] if isinstance(message, (list, tuple, set)) else message
+        ).delete()
 
-class MessagePacker:
-    def __init__(self, client):
-        self.files = {}
-        self.messages = []
-        self._client = client
+    async def fakequote_parse_messages(self, args: str, reply: Message):
+        async def get_user(args: str):
+            args_, text = args.split(), ""
+            user = await self.client.get_entity(
+                int(args_[0]) if args_[0].isdigit() else args_[0]
+            )
 
-    async def add(self, msg):
-        packed = await self.packMessage(msg)
-        if packed:
-            self.messages.append(packed)
+            if len(args_) < 2:
+                user = await self.client.get_entity(
+                    int(args) if args.isdigit() else args
+                )
+            else:
+                text = args.split(maxsplit=1)[1]
+            return user, text
 
-    async def packMessage(self, msg):
-        obj = {}
+        if reply or reply and args:
+            user = reply.sender
+            name, avatar = await self.get_profile_data(user)
+            text = args or ""
 
-        if text := msg.message:
-            obj["text"] = text
+        else:
+            messages = []
+            for part in args.split("; "):
+                user, text = await get_user(part)
+                name, avatar = await self.get_profile_data(user)
+                reply_id = reply_name = reply_text = None
 
-        if entities := MessagePacker.encodeEntities(msg.entities or []):
-            obj["entities"] = entities
+                if " -r " in part:
+                    user, text = await get_user("".join(part.split(" -r ")[0]))
+                    user2, text2 = await get_user("".join(part.split(" -r ")[1]))
 
-        if media := msg.media:
-            file = await self.downloadMedia(media)
-            if file:
-                obj["picture"] = {"file": file}
+                    name, avatar = await self.get_profile_data(user)
+                    name2, _ = await self.get_profile_data(user2)
 
-        if "text" not in obj and "picture" not in obj:
-            return null
+                    reply_id = user2.id
+                    reply_name = name2
+                    reply_text = text2
 
-        obj["author"] = await self.encodeAuthor(msg)
-
-        reply = await msg.get_reply_message()
-        if reply:
-            obj["reply"] = await self.encodeReply(reply)
-
-        return obj
-
-    @staticmethod
-    def encodeEntities(entities):
-        encEntities = []
-        for entity in entities:
-            if entityType := MessagePacker.getEntityType(entity):
-                encEntities.append(
+                messages.append(
                     {
-                        "type": entityType,
-                        "offset": entity.offset,
-                        "length": entity.length,
+                        "text": text,
+                        "media": None,
+                        "entities": None,
+                        "author": {
+                            "id": user.id,
+                            "name": name,
+                            "avatar": avatar,
+                            "rank": "",
+                        },
+                        "reply": {
+                            "id": reply_id,
+                            "name": reply_name,
+                            "text": reply_text,
+                        },
                     }
                 )
-        return encEntities
+            return messages
 
-    @staticmethod
-    def getEntityType(entity):
-        t = type(entity)
-        if t is MessageEntityBold:
-            return "bold"
-        if t is MessageEntityItalic:
-            return "italic"
-        if t in [MessageEntityUrl, MessageEntityPhone]:
-            return "url"
-        if t is MessageEntityCode:
-            return "monospace"
-        if t is MessageEntityStrike:
-            return "strikethrough"
-        if t is MessageEntityUnderline:
-            return "underline"
-        if t in [
-            MessageEntityMention,
-            MessageEntityTextUrl,
-            MessageEntityMentionName,
-            MessageEntityHashtag,
-            MessageEntityCashtag,
-            MessageEntityBotCommand,
-        ]:
-            return "bluetext"
-        return null
+        return [
+            {
+                "text": text,
+                "media": None,
+                "entities": None,
+                "author": {"id": user.id, "name": name, "avatar": avatar, "rank": ""},
+                "reply": {"id": None, "name": None, "text": None},
+            }
+        ]
 
-    async def downloadMedia(self, inMedia, thumb=null):
-        media = MessagePacker.getMedia(inMedia)
-        if not media:
-            return null
-        mid = str(media.id)
-        if thumb:
-            mid += f".{str(thumb)}"
-        if mid not in self.files:
-            try:
-                mime = media.mime_type
-            except AttributeError:
-                mime = "image/jpg"
-            dl = await self._client.download_media(media, bytes, thumb=thumb)
-            self.files[mid] = (str(len(self.files)), dl, mime)
-        return self.files[mid][0]
+    async def get_profile_data(self, user: types.User):
+        avatar = await self.client.download_profile_photo(user.id, bytes)
+        return (
+            telethon.utils.get_display_name(user),
+            base64.b64encode(avatar).decode() if avatar else None,
+        )
 
-    @staticmethod
-    def getMedia(media):
-        t = type(media)
-        if t is MessageMediaPhoto:
-            return media.photo
-        if t is MessageMediaDocument:
-            for attribute in media.document.attributes:
-                if isinstance(attribute, DocumentAttributeSticker):
-                    return media.document
-        elif t is MessageMediaWebPage:
-            if media.webpage.type == "photo":
-                return media.webpage.photo
-        return null
+    async def sqsetcmd(self, message: Message) -> None:
+        """<bg_color/text_color> <value> - Configure SQuotes"""
+        args: List[str] = utils.get_args_raw(message).split(maxsplit=1)
+        if not args:
+            return await utils.answer(
+                message,
+                (
+                    "<b>[SQuotes]</b> Settings:\n\nMax messages"
+                    " (<code>max_messages</code>):"
+                    f" {self.settings['max_messages']}\nBackground color"
+                    f" (<code>bg_color</code>): {self.settings['bg_color']}\nForeground"
+                    f" color (<code>text_color</code>): {self.settings['text_color']}"
+                ),
+            )
 
-    async def downloadProfilePicture(self, entity):
-        media = entity.photo
-        if not media or isinstance(media, ChatPhotoEmpty):
-            return null
-        mid = str(media.photo_id)
-        if mid not in self.files:
-            dl = await self._client.download_profile_photo(entity, bytes)
-            self.files[mid] = (str(len(self.files)), dl, "image/jpg")
-        return self.files[mid][0]
+        if args[0] == "reset":
+            self.get_settings(True)
+            await utils.answer(message, "<b>[SQuotes]</b> Settings has been reset")
+            return
 
-    async def encodeAuthor(self, msg):
-        uid, name, picture, adminTitle = await self.getAuthor(msg)
+        if len(args) < 2:
+            await utils.answer(message, "<b>[SQuotes]</b> Insufficient args")
+            return
 
-        obj = {"id": uid, "name": name}
-        if picture:
-            obj["picture"] = {"file": picture}
-        if adminTitle:
-            obj["adminTitle"] = adminTitle
+        mods = ["max_messages", "bg_color", "text_color"]
+        if args[0] not in mods:
+            await utils.answer(message, f"<b>[SQuotes]</b> Unknown param")
+            return
+        elif args[0] == "max_messages":
+            if not args[1].isdigit():
+                await utils.answer(message, "<b>[SQuotes]</b> Number is expected")
+                return
 
-        return obj
+            self.settings[args[0]] = int(args[1])
 
-    async def getAuthor(self, msg, full=true):
-        uid = null
-        name = null
-        picture = null
-        adminTitle = null
+        else:
+            self.settings[args[0]] = args[1]
 
-        chat = msg.peer_id
-        peer = msg.from_id or chat
-        if fwd := msg.fwd_from:
-            peer = fwd.from_id
-            name = fwd.post_author or fwd.from_name
+        self.db.set("SQuotes", "settings", self.settings)
+        return await utils.answer(
+            message, f"<b>[SQuotes]</b> Param {args[0]} value is now {args[1]}"
+        )
 
-        t = type(peer)
-        if t is int:
-            uid = peer
-        elif t is PeerUser:
-            uid = peer.user_id
-        elif t is PeerChannel:
-            uid = peer.channel_id
-        elif t is PeerChat:
-            uid = peer.chat_id
-        elif t is PeerBlocked:
-            uid = peer.peer_id
-        elif not peer:
-            uid = int(hashlib.shake_256(name.encode("utf-8")).hexdigest(6), 16)
+    def get_settings(self, force: bool = False):
+        settings: dict = self.db.get("SQuotes", "settings", {})
+        if not settings or force:
+            settings.update(
+                {"max_messages": 15, "bg_color": "#162330", "text_color": "#fff"}
+            )
+            self.db.set("SQuotes", "settings", settings)
 
-        if not name:
-            entity = null
-            try:
-                entity = await self._client.get_entity(peer)
-            except Exception:
-                entity = await msg.get_chat()
+        return settings
 
-            if isinstance(entity, User) and entity.deleted:
-                name = "Deleted Account"
-            else:
-                name = get_display_name(entity)
-
-            if full:
-                picture = await self.downloadProfilePicture(entity)
-
-                if isinstance(chat, (PeerChannel, PeerChat)):
-                    admins = await self._client.get_participants(
-                        chat, filter=ChannelParticipantsAdmins
-                    )
-                    for admin in admins:
-                        participant = admin.participant
-                        if participant.user_id == uid:
-                            try:
-                                adminTitle = participant.rank
-                            except AttributeError:
-                                adminTitle = null
-                            if not adminTitle:
-                                if isinstance(participant, ChannelParticipantCreator):
-                                    adminTitle = "owner"
-                                else:
-                                    adminTitle = "admin"
-                            break
-
-        return uid, name, picture, adminTitle
-
-    async def encodeReply(self, reply):
-        obj = {}
-
-        if text := reply.message:
-            obj["text"] = text
-        elif media := reply.media:
-            t = type(media)
-            obj.text = "📷 Photo" if t is MessageMediaPhoto else "💾 File"
-        name = (await self.getAuthor(reply, full=false))[1]
-
-        obj["author"] = name
-
-        if media := reply.media:
-            file = await self.downloadMedia(media, -1)
-            if file:
-                obj["thumbnail"] = {"file": file}
-
-        return obj
+    async def _api_request(self, data: dict):
+        return await utils.run_sync(requests.post, self.api_endpoint, json=data)

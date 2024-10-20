@@ -4,9 +4,9 @@
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
 # Name: AutoComment
-# Author: DarkModules
+# Author: DziruModules
 # Commands:
-# Failed to parse
+# .comment
 # ---------------------------------------------------------------------------------
 
 #
@@ -16,7 +16,10 @@
 # 🌐 https://www.gnu.org/licenses/agpl-3.0.html
 #
 # meta developer: @dziru
+# meta pic: https://raw.githubusercontent.com/DziruModules/assets/master/DziruModules.jpg
+# meta banner: https://raw.githubusercontent.com/DziruModules/assets/master/AutoComment.png
 # scope: hikka_only
+# coded by: @dziru && @penggrin
 
 import logging
 
