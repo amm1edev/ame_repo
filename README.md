@@ -1,6 +1,6 @@
 # This repository have 300+ modules for Hikka
 **Hikka is Userbot for Telegram. 
-More: https://hikka_talks.t.me **
+More: https://hikka_talks.t.me**
 
 ## How to install modules from this? 
 ### Add this repo to Hikka. 
@@ -13,4 +13,4 @@ More: https://hikka_talks.t.me **
 ```
 ### Full list of modules you can see in full.txt
 
-## _**I'm is no developer of any modules from here!**_
+### _**I'm is no developer of any modules from here!**_
