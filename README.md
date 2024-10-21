@@ -11,6 +11,9 @@ More: https://hikka_talks.t.me**
 ```Hikka
 .dlm {module_name}
 ```
-### Full list of modules you can see in full.txt
+### Full list of modules you can see in full.txt or in Telegram command
+```Hikka
+.terminal wget https://github.com/amm1edev/ame_repo/raw/main/full.txt && cat full.txt && rm -r full.txt
+```
 
 ### _**I'm is no developer of any modules from here!**_
