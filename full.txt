@@ -957,3 +957,14 @@ profile
 search
 shortener
 AnimeQuotes
+dice
+clickon
+modlist
+whoyou
+loli
+DoxTool
+id
+randomizer
+compliments
+pinterest
+DelMessTools
